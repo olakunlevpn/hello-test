@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 # ============================================
 # Forg365 — Auto Deploy Script (runs via cron)
@@ -33,20 +32,27 @@ echo "Remote: $REMOTE" >> "$LOG_FILE"
 
 exec >> "$LOG_FILE" 2>&1
 
+# ALWAYS remove maintenance file on exit — even if script fails
+cleanup() {
+    rm -f /tmp/forg365-maintenance
+    echo "  Maintenance mode disabled"
+}
+trap cleanup EXIT
+
 # Source env
 set -a
 source "$PROJECT_DIR/.env.local"
 set +a
 
-echo "[1/8] Enabling maintenance mode..."
+echo "[1/7] Enabling maintenance mode..."
 touch /tmp/forg365-maintenance
 
-echo "[2/8] Pulling changes..."
+echo "[2/7] Pulling changes..."
 git stash 2>/dev/null || true
 git fetch origin "$BRANCH"
 git reset --hard "origin/$BRANCH"
 
-echo "[3/8] Checking npm packages..."
+echo "[3/7] Checking npm packages..."
 if git diff HEAD@{1} --name-only 2>/dev/null | grep -q "package-lock.json"; then
     npm ci
     echo "  npm ci completed"
@@ -54,22 +60,18 @@ else
     echo "  No package changes, skipping"
 fi
 
-echo "[4/8] Running Prisma migrations..."
+echo "[4/7] Running Prisma migrations..."
 npx prisma generate
 npx prisma migrate deploy
 
-echo "[5/8] Building Next.js..."
+echo "[5/7] Building Next.js..."
 NODE_OPTIONS="--max-old-space-size=2048" npm run build
 
-echo "[6/8] Restarting PM2..."
+echo "[6/7] Restarting PM2..."
 pm2 restart ecosystem.config.cjs --update-env 2>/dev/null || pm2 start ecosystem.config.cjs
 pm2 save
 
-echo "[7/8] Disabling maintenance mode..."
-sleep 2
-rm -f /tmp/forg365-maintenance
-
-echo "[8/8] Purging Cloudflare cache..."
+echo "[7/7] Purging Cloudflare cache..."
 if [ -n "$CF_API_TOKEN" ]; then
     curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$CF_ZONE_ID/purge_cache" \
         -H "Authorization: Bearer $CF_API_TOKEN" \
