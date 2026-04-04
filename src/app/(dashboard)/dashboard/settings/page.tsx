@@ -33,8 +33,10 @@ export default function SettingsPage() {
   const [passwordLoading, setPasswordLoading] = useState(false);
 
   // Custom Domains state
-  interface CustomDomain { id: string; domain: string; verified: boolean; createdAt: string; }
+  interface CustomDomain { id: string; domain: string; verified: boolean; sslActive: boolean; createdAt: string; }
   const [domains, setDomains] = useState<CustomDomain[]>([]);
+  const [verifyingId, setVerifyingId] = useState<string | null>(null);
+  const [provisioningId, setProvisioningId] = useState<string | null>(null);
   const [domainsLoading, setDomainsLoading] = useState(false);
   const [newDomain, setNewDomain] = useState("");
 
@@ -196,9 +198,46 @@ export default function SettingsPage() {
       const res = await fetch(`/api/domains/${id}`, { method: "DELETE" });
       if (res.ok) {
         setDomains((prev) => prev.filter((d) => d.id !== id));
+        toast.success(t("settingsSaved"));
       }
     } catch {
-      // silently handle
+      toast.error(t("error"));
+    }
+  };
+
+  const handleVerifyDomain = async (id: string) => {
+    setVerifyingId(id);
+    try {
+      const res = await fetch(`/api/domains/${id}/verify`, { method: "POST" });
+      const data = await res.json();
+      if (data.verified) {
+        setDomains((prev) => prev.map((d) => d.id === id ? { ...d, verified: true } : d));
+        toast.success(t("domainVerified"));
+      } else {
+        toast.error(data.message || t("domainNotVerified"));
+      }
+    } catch {
+      toast.error(t("error"));
+    } finally {
+      setVerifyingId(null);
+    }
+  };
+
+  const handleProvisionSsl = async (id: string) => {
+    setProvisioningId(id);
+    try {
+      const res = await fetch(`/api/domains/${id}/provision`, { method: "POST" });
+      const data = await res.json();
+      if (data.sslActive) {
+        setDomains((prev) => prev.map((d) => d.id === id ? { ...d, sslActive: true } : d));
+        toast.success(t("domainSslActive"));
+      } else {
+        toast.error(data.error || t("error"));
+      }
+    } catch {
+      toast.error(t("error"));
+    } finally {
+      setProvisioningId(null);
     }
   };
 
@@ -501,23 +540,49 @@ export default function SettingsPage() {
                         </div>
                       </td>
                       <td className="px-4 py-2">
-                        {domain.verified ? (
-                          <Badge className="bg-green-600">{t("domainVerified")}</Badge>
-                        ) : (
-                          <div className="space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {domain.verified ? (
+                            <Badge className="bg-green-600">{t("domainVerified")}</Badge>
+                          ) : (
                             <Badge variant="secondary">{t("domainPending")}</Badge>
-                            <p className="text-xs text-muted-foreground">Set DNS then wait up to 24h</p>
-                          </div>
-                        )}
+                          )}
+                          {domain.verified && domain.sslActive && (
+                            <Badge className="bg-blue-600">{t("domainSslActive")}</Badge>
+                          )}
+                          {domain.verified && domain.sslActive && (
+                            <Badge variant="outline" className="text-green-500">{t("domainReady")}</Badge>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-2 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveDomain(domain.id)}
-                        >
-                          <Trash2 className="h-3 w-3 text-destructive" />
-                        </Button>
+                        <div className="flex items-center gap-1 justify-end">
+                          {!domain.verified && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleVerifyDomain(domain.id)}
+                              disabled={verifyingId === domain.id}
+                            >
+                              {verifyingId === domain.id ? t("domainVerifying") : t("domainVerify")}
+                            </Button>
+                          )}
+                          {domain.verified && !domain.sslActive && (
+                            <Button
+                              size="sm"
+                              onClick={() => handleProvisionSsl(domain.id)}
+                              disabled={provisioningId === domain.id}
+                            >
+                              {provisioningId === domain.id ? t("domainProvisioning") : t("domainProvisionSsl")}
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveDomain(domain.id)}
+                          >
+                            <Trash2 className="h-3 w-3 text-destructive" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}

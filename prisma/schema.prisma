@@ -269,6 +269,7 @@ model CustomDomain {
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   domain      String       @unique
   verified    Boolean      @default(false)
+  sslActive   Boolean      @default(false)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   invitations Invitation[]

@@ -1,0 +1,1 @@
+ALTER TABLE "CustomDomain" ADD COLUMN "sslActive" BOOLEAN NOT NULL DEFAULT false;

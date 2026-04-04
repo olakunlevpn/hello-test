@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireActiveSubscription } from "@/lib/auth";
+import { execSync } from "child_process";
 
 export async function DELETE(
   _request: NextRequest,
@@ -23,6 +24,18 @@ export async function DELETE(
 
   if (!domain) {
     return NextResponse.json({ error: "Domain not found" }, { status: 404 });
+  }
+
+  // Clean up Nginx config if SSL was provisioned
+  if (domain.sslActive) {
+    const domainName = domain.domain.replace(/[^a-zA-Z0-9.-]/g, "");
+    try {
+      execSync(`rm -f /etc/nginx/sites-enabled/custom-${domainName}`);
+      execSync(`rm -f /etc/nginx/sites-available/custom-${domainName}`);
+      execSync("nginx -t && systemctl reload nginx");
+    } catch {
+      // Nginx cleanup failed — non-critical, continue with delete
+    }
   }
 
   await prisma.customDomain.delete({ where: { id } });
