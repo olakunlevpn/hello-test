@@ -25,6 +25,7 @@ export function translateError(apiError: string | undefined | null): string {
   if (mapped) return mapped();
   // Check partial matches for Graph API errors
   if (apiError.includes("Graph API error")) return t("error");
+  if (apiError.includes("Authorization_RequestDenied") || apiError.includes("Access is denied") || apiError.includes("Insufficient privileges")) return t("errorSubscriptionRequired");
   if (apiError.includes("Token expired")) return t("tokenExpired");
   return t("error");
 }

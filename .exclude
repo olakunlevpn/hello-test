@@ -1,0 +1,21 @@
+# .exclude - Non-project files identified by clean export scan
+# Last scanned: 2026-04-04
+
+# Agent & AI
+CLAUDE.md
+AGENTS.md
+.claude/
+
+# Plans & Docs
+docs/
+
+# Build artifacts
+.next/
+node_modules/
+
+# Environment
+.env
+.env.local
+
+# OS
+.DS_Store
