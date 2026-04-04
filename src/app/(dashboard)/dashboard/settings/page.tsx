@@ -146,6 +146,22 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSendTestMessage = async () => {
+    setTelegramLoading(true);
+    try {
+      const res = await fetch("/api/telegram", { method: "PUT" });
+      if (res.ok) {
+        toast.success(t("telegramTestSent"));
+      } else {
+        toast.error(t("telegramTestFailed"));
+      }
+    } catch {
+      toast.error(t("telegramTestFailed"));
+    } finally {
+      setTelegramLoading(false);
+    }
+  };
+
   const handleAddDomain = async () => {
     if (!newDomain.trim()) return;
     setDomainsLoading(true);
@@ -357,7 +373,7 @@ export default function SettingsPage() {
                 <p className="text-sm text-muted-foreground">{t("telegramChatIdHelp")}</p>
 
                 {chatId ? (
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-wrap">
                     <code className="rounded bg-muted px-3 py-1.5 text-sm">{chatId}</code>
                     <Badge className="bg-green-600">{t("telegramConnected")}</Badge>
                     <Button
@@ -368,6 +384,13 @@ export default function SettingsPage() {
                     >
                       <RefreshCw className="mr-1 h-3 w-3" />
                       {t("retry")}
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleSendTestMessage}
+                      disabled={telegramLoading}
+                    >
+                      {telegramLoading ? t("loading") : t("telegramSendTest")}
                     </Button>
                   </div>
                 ) : (
