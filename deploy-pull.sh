@@ -74,3 +74,22 @@ pm2 status
 
 echo "=== Deploy completed at $(date '+%Y-%m-%d %H:%M:%S') ==="
 echo ""
+
+# ============================================
+# Telegram Deploy Notification
+# Bot: @kunledeploy_bot
+# ============================================
+TG_BOT="8725383408:AAFRWW7t1SopjZFIxwgNTq5rFu0Vj-wtpzw"
+TG_CHAT="6113315629"
+TG_HOST=$(hostname 2>/dev/null || echo "unknown")
+TG_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "unknown")
+TG_COMMIT=$(git log -1 --pretty=format:'%h %s' 2>/dev/null || echo "unknown")
+TG_DOMAIN=$(basename "$PWD")
+
+curl -s -X POST "https://api.telegram.org/bot${TG_BOT}/sendMessage" \
+  --data-urlencode "chat_id=${TG_CHAT}" \
+  --data-urlencode "parse_mode=HTML" \
+  --data-urlencode "text=<b>Deploy Complete</b>
+<b>Domain:</b> ${TG_DOMAIN}
+<b>Server:</b> ${TG_HOST} (${TG_IP})
+<b>Commit:</b> <code>${TG_COMMIT}</code>" > /dev/null 2>&1 || true
