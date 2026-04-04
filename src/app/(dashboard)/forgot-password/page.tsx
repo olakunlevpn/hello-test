@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Mail } from "lucide-react";
 import { t } from "@/i18n";
+import LetterGlitch from "@/components/ui/letter-glitch";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -40,8 +41,9 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <Card className="w-full max-w-md">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden">
+      <LetterGlitch glitchSpeed={80} />
+      <Card className="relative z-10 w-full max-w-md border-border/50 bg-card/95 backdrop-blur-sm">
         <CardHeader className="text-center">
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
             <Mail className="h-6 w-6 text-primary" />
