@@ -170,7 +170,7 @@ export default function KeywordListenerPage() {
     }
 
     if (created > 0) {
-      toast.success(`${created} keyword listener(s) created`);
+      toast.success(t("keywordListenerCreated", { count: String(created) }));
       setNewKeyword("");
       loadData();
     } else {

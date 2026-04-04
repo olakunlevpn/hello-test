@@ -637,6 +637,7 @@ const en = {
   keywordListenerMatches: "Matches",
   keywordListenerNoKeywords: "No keywords configured. Add a keyword to start monitoring.",
   keywordListenerActive: "{count} keywords active",
+  keywordListenerCreated: "{count} keyword listener(s) created",
   b2bSender: "B2B Sender",
   rulesStealth: "Rules & Stealth",
   rulesStealthDescription: "Manage automation rules, silent mode, and stealth settings for each account. Select an account then open its Outlook settings.",
