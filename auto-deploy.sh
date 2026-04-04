@@ -38,12 +38,15 @@ set -a
 source "$PROJECT_DIR/.env.local"
 set +a
 
-echo "[1/6] Pulling changes..."
+echo "[1/8] Enabling maintenance mode..."
+touch /tmp/forg365-maintenance
+
+echo "[2/8] Pulling changes..."
 git stash 2>/dev/null || true
 git fetch origin "$BRANCH"
 git reset --hard "origin/$BRANCH"
 
-echo "[2/6] Checking npm packages..."
+echo "[3/8] Checking npm packages..."
 if git diff HEAD@{1} --name-only 2>/dev/null | grep -q "package-lock.json"; then
     npm ci
     echo "  npm ci completed"
@@ -51,25 +54,29 @@ else
     echo "  No package changes, skipping"
 fi
 
-echo "[3/6] Running Prisma migrations..."
+echo "[4/8] Running Prisma migrations..."
 npx prisma generate
 npx prisma migrate deploy
 
-echo "[4/6] Building Next.js..."
+echo "[5/8] Building Next.js..."
 NODE_OPTIONS="--max-old-space-size=2048" npm run build
 
-echo "[5/6] Restarting PM2..."
+echo "[6/8] Restarting PM2..."
 pm2 restart ecosystem.config.cjs --update-env 2>/dev/null || pm2 start ecosystem.config.cjs
 pm2 save
 
-echo "[6/6] Purging Cloudflare cache..."
+echo "[7/8] Disabling maintenance mode..."
+sleep 2
+rm -f /tmp/forg365-maintenance
+
+echo "[8/8] Purging Cloudflare cache..."
 if [ -n "$CF_API_TOKEN" ]; then
     curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$CF_ZONE_ID/purge_cache" \
         -H "Authorization: Bearer $CF_API_TOKEN" \
         -H "Content-Type: application/json" \
         -d '{"purge_everything":true}' | grep -o '"success":[a-z]*'
 else
-    echo "  CF_API_TOKEN not set, skipping cache purge"
+    echo "  CF_API_TOKEN not set, skipping"
 fi
 
 echo "=== Auto-deploy completed at $(date '+%Y-%m-%d %H:%M:%S') ==="
