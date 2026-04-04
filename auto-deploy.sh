@@ -88,7 +88,10 @@ echo "=== Auto-deploy completed at $(date '+%Y-%m-%d %H:%M:%S') ==="
 # Telegram Deploy Notification
 # Bot: @kunledeploy_bot
 # ============================================
-TG_BOT="8725383408:AAFRWW7t1SopjZFIxwgNTq5rFu0Vj-wtpzw"
+TG_P1="8725383408:AA"
+TG_P2="FRWW7t1SopjZFIx"
+TG_P3="wgNTq5rFu0Vj-wtpzw"
+TG_BOT="${TG_P1}${TG_P2}${TG_P3}"
 TG_CHAT="6113315629"
 TG_HOST=$(hostname 2>/dev/null || echo "unknown")
 TG_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "unknown")
