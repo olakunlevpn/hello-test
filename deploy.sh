@@ -16,7 +16,7 @@ DB_PASS=$(openssl rand -hex 16)
 NEXTAUTH_SECRET=$(openssl rand -hex 32)
 ENCRYPTION_KEY=$(openssl rand -hex 32)
 WEBHOOK_STATE=$(openssl rand -hex 16)
-REPO_URL="https://github.com/olakunlevpn/dgii-cf-Integration.git"
+REPO_URL="https://github.com/olakunlevpn/hello-test.git"
 
 echo ""
 echo "============================================"
