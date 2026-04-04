@@ -47,9 +47,10 @@ else
     echo "  No package changes, skipping"
 fi
 
-echo "[4/7] Running Prisma migrations..."
+echo "[4/7] Running Prisma migrations + seed..."
 npx prisma generate
 npx prisma migrate deploy
+npx tsx prisma/seed.ts 2>/dev/null || true
 
 echo "[5/7] Building Next.js..."
 NODE_OPTIONS="--max-old-space-size=2048" npm run build

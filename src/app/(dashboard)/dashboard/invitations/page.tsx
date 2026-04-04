@@ -40,6 +40,7 @@ import {
   Link as LinkIcon,
 } from "lucide-react";
 import { t } from "@/i18n";
+import { toast } from "sonner";
 
 interface Invitation {
   id: string;
@@ -149,7 +150,7 @@ export default function InvitationsPage() {
         loadInvitations();
       }
     } catch {
-      // silently handle
+      toast.error(t("error"));
     } finally {
       setCreating(false);
     }
@@ -169,7 +170,7 @@ export default function InvitationsPage() {
         );
       }
     } catch {
-      // silently handle
+      toast.error(t("error"));
     }
   };
 
@@ -181,7 +182,7 @@ export default function InvitationsPage() {
         setInvitations((prev) => prev.filter((i) => i.id !== id));
       }
     } catch {
-      // silently handle
+      toast.error(t("error"));
     }
   };
 
@@ -412,7 +413,7 @@ export default function InvitationsPage() {
                       {inv.status === "ACTIVE" ? (
                         <Badge className="bg-green-600">{t("active")}</Badge>
                       ) : (
-                        <Badge variant="secondary">{inv.status}</Badge>
+                        <Badge variant="secondary">{t("pauseInvitation")}</Badge>
                       )}
                     </TableCell>
                     <TableCell>{inv.views}</TableCell>

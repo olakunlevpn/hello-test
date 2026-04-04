@@ -18,6 +18,10 @@ export async function PATCH(
   const { id } = await params;
   const body = await request.json();
 
+  if (body.status && !["ACTIVE", "PAUSED", "EXPIRED"].includes(body.status)) {
+    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+  }
+
   const invitation = await prisma.invitation.findFirst({ where: { id, userId } });
   if (!invitation) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
