@@ -42,24 +42,14 @@
       line-height: 1.6;
       margin-bottom: 1.5rem;
     }
-    .dot-loader {
-      display: flex;
-      gap: 6px;
-      justify-content: center;
+    .loading-verb {
+      font-size: 0.95rem;
+      color: #84cc16;
+      font-weight: 500;
+      min-height: 1.5em;
+      transition: opacity 0.3s ease;
     }
-    .dot-loader span {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #555;
-      animation: pulse 1.4s ease-in-out infinite;
-    }
-    .dot-loader span:nth-child(2) { animation-delay: 0.2s; }
-    .dot-loader span:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes pulse {
-      0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
-      40% { opacity: 1; transform: scale(1.2); }
-    }
+    .loading-verb.fade { opacity: 0; }
     .retry {
       margin-top: 2rem;
       font-size: 0.75rem;
@@ -67,8 +57,18 @@
     }
   </style>
   <script>
-    // Auto-refresh every 10 seconds to check if site is back
-    setTimeout(function() { location.reload(); }, 10000);
+    setTimeout(function(){location.reload()},10000);
+    var verbs=["Accomplishing","Architecting","Baking","Beaming","Bootstrapping","Brewing","Calculating","Cascading","Channeling","Choreographing","Churning","Coalescing","Composing","Computing","Concocting","Contemplating","Cooking","Crafting","Creating","Crunching","Crystallizing","Cultivating","Deciphering","Deliberating","Enchanting","Envisioning","Fermenting","Forging","Forming","Garnishing","Generating","Germinating","Grooving","Harmonizing","Hashing","Hatching","Ideating","Imagining","Improvising","Incubating","Infusing","Kneading","Manifesting","Marinating","Metamorphosing","Mulling","Orchestrating","Percolating","Pondering","Processing","Proofing","Puzzling","Ruminating","Seasoning","Simmering","Sketching","Spinning","Sprouting","Stewing","Synthesizing","Tempering","Thinking","Tinkering","Transmuting","Unfurling","Vibing","Whisking","Working","Wrangling","Zesting"];
+    var el=document.getElementById("verb");
+    function next(){
+      el.classList.add("fade");
+      setTimeout(function(){
+        el.textContent=verbs[Math.floor(Math.random()*verbs.length)]+"...";
+        el.classList.remove("fade");
+      },300);
+    }
+    next();
+    setInterval(next,2000);
   </script>
 </head>
 <body>
@@ -79,11 +79,7 @@
     </svg>
     <h1>We'll be right back</h1>
     <p>We're updating the system to bring you new features and improvements. This usually takes less than a minute.</p>
-    <div class="dot-loader">
-      <span></span>
-      <span></span>
-      <span></span>
-    </div>
+    <div class="loading-verb" id="verb">Loading...</div>
     <p class="retry">This page will automatically refresh...</p>
   </div>
 </body>
