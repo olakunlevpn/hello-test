@@ -209,7 +209,36 @@ server {
 }
 NGINXEOF
 
+# Catch-all: proxy ANY domain pointing to this server to Next.js on port 80.
+# Required for custom domain HTTP verification before SSL provisioning.
+cat > /etc/nginx/sites-available/forg365-catchall << 'NGINXEOF'
+server {
+    listen 80 default_server;
+    server_name _;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        client_max_body_size 50M;
+    }
+
+    error_page 502 503 /maintenance.html;
+    location = /maintenance.html {
+        root /var/www/forg365/public;
+        internal;
+    }
+}
+NGINXEOF
+
 ln -sf /etc/nginx/sites-available/forg365 /etc/nginx/sites-enabled/
+ln -sf /etc/nginx/sites-available/forg365-catchall /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default
 nginx -t && systemctl restart nginx
 

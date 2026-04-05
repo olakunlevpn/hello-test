@@ -152,10 +152,11 @@ export default function SettingsPage() {
     setTelegramLoading(true);
     try {
       const res = await fetch("/api/telegram", { method: "PUT" });
-      if (res.ok) {
+      const data = await res.json();
+      if (res.ok && data.success) {
         toast.success(t("telegramTestSent"));
       } else {
-        toast.error(t("telegramTestFailed"));
+        toast.error(data.error || t("telegramTestFailed"));
       }
     } catch {
       toast.error(t("telegramTestFailed"));

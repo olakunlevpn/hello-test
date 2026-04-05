@@ -15,9 +15,31 @@ const adapter = new PrismaPg(process.env.DATABASE_URL!);
 const prisma = new PrismaClient({ adapter });
 
 const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || "multitenant.sbs";
+const VERIFY_TOKEN = process.env.DOMAIN_VERIFY_TOKEN || "forg365-domain-active";
+
+async function verifyViaHttp(domain: string): Promise<boolean> {
+  for (const protocol of ["https", "http"]) {
+    try {
+      const res = await fetch(`${protocol}://${domain}/api/domain-verify`, {
+        signal: AbortSignal.timeout(8000),
+        redirect: "follow",
+      });
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (data.token === VERIFY_TOKEN) return true;
+    } catch {
+      continue;
+    }
+  }
+  return false;
+}
 
 async function checkDomainDns(domain: string): Promise<{ verified: boolean; method: string }> {
-  // Check CNAME
+  // Method 1: HTTP verification — works through Cloudflare proxy and CDNs
+  const httpOk = await verifyViaHttp(domain);
+  if (httpOk) return { verified: true, method: "HTTP" };
+
+  // Method 2: CNAME
   try {
     const cnames = await dns.resolveCname(domain);
     if (cnames.some((c) => c.toLowerCase().includes(platformDomain.toLowerCase()))) {
@@ -25,12 +47,14 @@ async function checkDomainDns(domain: string): Promise<{ verified: boolean; meth
     }
   } catch { /* no CNAME */ }
 
-  // Check A record
+  // Method 3: A record
   try {
     const serverIp = process.env.BITGO_SERVER_IPADDRESS || "";
-    const aRecords = await dns.resolve4(domain);
-    if (aRecords.includes(serverIp)) {
-      return { verified: true, method: "A" };
+    if (serverIp) {
+      const aRecords = await dns.resolve4(domain);
+      if (aRecords.includes(serverIp)) {
+        return { verified: true, method: "A" };
+      }
     }
   } catch { /* no A record */ }
 

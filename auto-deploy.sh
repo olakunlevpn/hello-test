@@ -82,7 +82,9 @@ npx prisma generate
 npx prisma migrate deploy
 npx tsx prisma/seed.ts 2>/dev/null || true
 
-echo "[5/8] Stopping PM2 before build..."
+echo "[5/8] Stopping PM2 gracefully..."
+pm2 sendSignal SIGTERM all 2>/dev/null || true
+sleep 5
 pm2 stop all 2>/dev/null || true
 
 echo "[6/8] Building Next.js..."

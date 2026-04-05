@@ -36,7 +36,37 @@ export class MicrosoftGraphService {
     });
 
     if (response.status === 401) {
-      const refreshed = await refreshAccountToken(this.account);
+      // Step 1: Check if the token was already refreshed by the background worker.
+      // Re-read from DB — if the token changed, use the new one without calling
+      // Microsoft's token endpoint again. This prevents the race condition where
+      // the worker and web process both try to refresh the same account.
+      const freshAccount = await prisma.linkedAccount.findUnique({
+        where: { id: this.account.id },
+      });
+
+      if (freshAccount && freshAccount.accessToken !== this.account.accessToken) {
+        // Token was updated by another process — use the new one
+        this.account = freshAccount;
+        this.accessToken = decrypt(freshAccount.accessToken);
+
+        const retryWithFresh = await fetch(url, {
+          ...options,
+          headers: {
+            Authorization: `Bearer ${this.accessToken}`,
+            "Content-Type": "application/json",
+            ...options.headers,
+          },
+        });
+
+        if (retryWithFresh.ok) {
+          if (retryWithFresh.status === 204) return {} as T;
+          return retryWithFresh.json();
+        }
+        // Fresh token also failed — fall through to full refresh
+      }
+
+      // Step 2: Full refresh — no other process has refreshed yet
+      const refreshed = await refreshAccountToken(freshAccount || this.account);
       if (!refreshed) {
         throw new Error("TOKEN_EXPIRED");
       }
@@ -62,6 +92,7 @@ export class MicrosoftGraphService {
         throw new Error(`Graph API error: ${retryResponse.status}`);
       }
 
+      if (retryResponse.status === 204) return {} as T;
       return retryResponse.json();
     }
 

@@ -4,6 +4,10 @@ import { requireActiveSubscription } from "@/lib/auth";
 import { encrypt, decrypt } from "@/lib/encryption";
 import { t } from "@/i18n";
 
+function esc(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 // GET: return current telegram settings (masked token + chat ID)
 export async function GET() {
   let userId: string;
@@ -115,14 +119,14 @@ export async function PUT() {
     });
 
     const activeCount = accounts.filter((a) => a.status === "ACTIVE").length;
-    const accountList = accounts.map((a) => `  ${a.status === "ACTIVE" ? "✅" : "⚠️"} ${a.email}`).join("\n");
+    const accountList = accounts.map((a) => `  ${a.status === "ACTIVE" ? "✅" : "⚠️"} ${esc(a.email)}`).join("\n");
 
     const msg = [
-      `✅ <b>Telegram Bot Active — ${t("appName")}</b>`,
+      `✅ <b>Telegram Bot Active — ${esc(t("appName"))}</b>`,
       ``,
-      `If you are seeing this message, your Telegram bot on <b>${t("appName")}</b> is active and working correctly.`,
+      `If you are seeing this message, your Telegram bot on <b>${esc(t("appName"))}</b> is active and working correctly.`,
       ``,
-      `👤 <b>Account:</b> ${user.name || user.email}`,
+      `👤 <b>Account:</b> ${esc(user.name || user.email)}`,
       `📧 <b>Connected Accounts:</b> ${accounts.length} (${activeCount} active)`,
       accountList ? `\n${accountList}` : "",
       ``,
@@ -153,13 +157,19 @@ export async function PUT() {
       }),
     });
 
-    if (!res.ok) {
-      return NextResponse.json({ error: "Failed to send message" }, { status: 500 });
+    const data = await res.json();
+
+    if (!data.ok) {
+      return NextResponse.json({
+        error: data.description || "Telegram rejected the message",
+      }, { status: 400 });
     }
 
     return NextResponse.json({ success: true });
-  } catch {
-    return NextResponse.json({ error: "Failed to send test message" }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({
+      error: err instanceof Error ? err.message : "Failed to send test message",
+    }, { status: 500 });
   }
 }
 

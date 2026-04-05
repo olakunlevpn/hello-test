@@ -38,6 +38,7 @@ module.exports = {
       env: { NODE_ENV: "production", ...env },
       autorestart: true,
       max_memory_restart: "512M",
+      kill_timeout: 15000,
     },
     {
       name: "forg365-webhook-worker",
@@ -48,6 +49,7 @@ module.exports = {
       env: { NODE_ENV: "production", ...env },
       autorestart: true,
       max_memory_restart: "512M",
+      kill_timeout: 10000,
     },
     {
       name: "forg365-domain-worker",
@@ -58,6 +60,7 @@ module.exports = {
       env: { NODE_ENV: "production", ...env },
       autorestart: true,
       max_memory_restart: "256M",
+      kill_timeout: 10000,
     },
   ],
 };
