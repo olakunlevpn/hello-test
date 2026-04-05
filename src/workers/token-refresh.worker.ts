@@ -20,34 +20,28 @@ setupRecurringJobs().catch((err) =>
 const worker = new Worker(
   "token-refresh",
   async (job) => {
+    console.log(`[token-worker] Job: ${job.name} (${job.id})`);
+
     if (job.name === "proactive-refresh-all") {
-      // Daily proactive refresh: refresh ALL active tokens regardless of expiry
-      // This prevents tokens from dying if the worker was down for a while
       const allActive = await prisma.linkedAccount.findMany({
         where: { status: "ACTIVE" },
       });
+      console.log(`[token-worker] Proactive refresh: ${allActive.length} active accounts`);
 
       for (const account of allActive) {
         const success = await refreshAccountToken(account);
-        if (!success) {
-          console.error(
-            `Proactive refresh failed for account ${account.id} (${account.email})`
-          );
-        }
+        console.log(`[token-worker] Proactive ${account.email}: ${success ? "OK" : "FAILED"}`);
       }
       return;
     }
 
-    // Default: refresh only accounts expiring soon
+    // Default: refresh accounts expiring within 30 minutes
     const accounts = await getAccountsNeedingRefresh();
+    console.log(`[token-worker] Refresh check: ${accounts.length} accounts need refresh`);
 
     for (const account of accounts) {
       const success = await refreshAccountToken(account);
-      if (!success) {
-        console.error(
-          `Token refresh failed for account ${account.id} (${account.email})`
-        );
-      }
+      console.log(`[token-worker] Refresh ${account.email}: ${success ? "OK" : "FAILED"}`);
     }
   },
   { connection }
