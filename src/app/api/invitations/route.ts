@@ -49,10 +49,16 @@ export async function POST(request: NextRequest) {
 
   const code = randomBytes(8).toString("hex");
 
-  // Validate domainId ownership if provided
+  // Validate domainId — user owns it OR it's a verified global domain
   if (domainId) {
     const domain = await prisma.customDomain.findFirst({
-      where: { id: domainId, userId },
+      where: {
+        id: domainId,
+        OR: [
+          { userId },
+          { isGlobal: true, verified: true },
+        ],
+      },
     });
     if (!domain) {
       return NextResponse.json({ error: "Invalid domain" }, { status: 400 });
