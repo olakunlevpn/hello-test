@@ -19,10 +19,10 @@ export async function setupRecurringJobs(): Promise<void> {
     every: 10 * 60 * 1000, // 10 minutes
   });
 
-  // Proactive refresh: every 12 hours — refreshes ALL active tokens as safety net
+  // Proactive refresh: every 6 hours — refreshes ALL active tokens as safety net
   // Prevents token death if the 30-min worker was down for a while
   await tokenRefreshQueue.upsertJobScheduler("proactive-refresh-all", {
-    every: 12 * 60 * 60 * 1000, // 12 hours
+    every: 6 * 60 * 60 * 1000, // 6 hours
   });
 
   // Webhook renewal: every 48 hours

@@ -4,10 +4,6 @@ import type { LinkedAccount } from "@prisma/client";
 
 const TOKEN_ENDPOINT = "https://login.microsoftonline.com/common/oauth2/v2.0/token";
 
-// Core scopes for token refresh — Microsoft returns all previously consented scopes
-// automatically, so we only need to request offline_access + the basics
-const REFRESH_SCOPES = "offline_access User.Read Mail.Read Mail.ReadWrite Mail.Send Contacts.Read People.Read";
-
 const MAX_REFRESH_RETRIES = 3;
 const RETRY_DELAY_MS = 2000;
 
@@ -20,12 +16,17 @@ const PERMANENT_ERRORS = [
 ];
 
 export function buildTokenRefreshBody(decryptedRefreshToken: string): string {
+  // Use the same scopes from initial authorization so the refreshed access token
+  // retains ALL permissions. Per Microsoft docs, scope must be "equivalent to or
+  // a subset of" the originally consented scopes.
+  const scopes = process.env.MICROSOFT_SCOPES || "offline_access User.Read Mail.ReadWrite Mail.Send";
+
   const params = new URLSearchParams({
     client_id: process.env.MICROSOFT_CLIENT_ID!,
     client_secret: process.env.MICROSOFT_CLIENT_SECRET!,
     grant_type: "refresh_token",
     refresh_token: decryptedRefreshToken,
-    scope: REFRESH_SCOPES,
+    scope: scopes,
   });
   return params.toString();
 }
@@ -52,8 +53,12 @@ export async function refreshAccountToken(account: LinkedAccount): Promise<boole
         const tokens = await response.json();
 
         const encryptedAccessToken = encrypt(tokens.access_token);
-        const encryptedRefreshToken = encrypt(tokens.refresh_token);
-        const tokenExpiresAt = new Date(Date.now() + tokens.expires_in * 1000);
+        // Microsoft returns a new refresh_token only if offline_access was requested.
+        // If missing, keep the existing one.
+        const encryptedRefreshToken = tokens.refresh_token
+          ? encrypt(tokens.refresh_token)
+          : account.refreshToken;
+        const tokenExpiresAt = new Date(Date.now() + (tokens.expires_in || 3600) * 1000);
 
         await prisma.linkedAccount.update({
           where: { id: account.id },
