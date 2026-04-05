@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import GlitchText from "@/components/ui/glitch-text";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
@@ -127,7 +128,7 @@ export default function DashboardSidebar({ open, onClose }: DashboardSidebarProp
         <div className="flex h-14 items-center justify-between border-b border-border px-6">
           <div className="flex items-center">
             <Mail className="mr-2 h-5 w-5 text-primary" />
-            <span className="text-lg font-bold">{t("appName")}</span>
+            <GlitchText text={t("appName")} className="text-lg" />
           </div>
           {onClose && (
             <button onClick={onClose} className="md:hidden p-1 rounded hover:bg-muted">
