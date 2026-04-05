@@ -286,7 +286,7 @@ export default function DashboardPage() {
       </Card>
 
       {!chartLoading && hasChartData && (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Activity Timeline */}
           <Card>
             <CardHeader>
@@ -404,7 +404,7 @@ export default function DashboardPage() {
 
           {/* Webhook Activity */}
           {chartData!.webhookTimeline && (
-            <Card className="md:col-span-2">
+            <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Webhook Activity</CardTitle>
