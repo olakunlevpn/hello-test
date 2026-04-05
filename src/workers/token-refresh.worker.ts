@@ -12,10 +12,21 @@ const connection = new Redis(process.env.REDIS_URL || "redis://localhost:6379", 
   maxRetriesPerRequest: null,
 });
 
-// Register recurring job schedules on startup
-setupRecurringJobs().catch((err) =>
-  console.error("Failed to setup recurring jobs:", err.message)
-);
+// Register recurring job schedules on startup — retry up to 5 times
+async function initSchedulers(retries = 5) {
+  for (let i = 1; i <= retries; i++) {
+    try {
+      await setupRecurringJobs();
+      console.log("[token-worker] Recurring jobs registered successfully");
+      return;
+    } catch (err) {
+      console.error(`[token-worker] Setup attempt ${i}/${retries} failed:`, err instanceof Error ? err.message : err);
+      if (i < retries) await new Promise((r) => setTimeout(r, 3000 * i));
+    }
+  }
+  console.error("[token-worker] Failed to setup recurring jobs after all retries");
+}
+initSchedulers();
 
 const worker = new Worker(
   "token-refresh",

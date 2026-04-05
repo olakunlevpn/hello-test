@@ -221,7 +221,11 @@ export default function TokenVaultPage() {
   };
 
   const tokenHealthBadge = (account: Account) => {
+    if (account.status === "NEEDS_REAUTH") {
+      return <Badge variant="destructive">{t("needsReauth")}</Badge>;
+    }
     if (account.status !== "ACTIVE") return <Badge variant="secondary">—</Badge>;
+
     const expiresIn = new Date(account.tokenExpiresAt).getTime() - Date.now();
     const minutes = Math.floor(expiresIn / 60000);
 
@@ -239,9 +243,10 @@ export default function TokenVaultPage() {
         </Badge>
       );
     }
+    // Access token expired but account is still ACTIVE — auto-refresh will handle it
     return (
-      <Badge variant="outline" className="text-red-500">
-        {t("expired")}
+      <Badge variant="outline" className="text-blue-500">
+        {t("expiring")} (0m)
       </Badge>
     );
   };
