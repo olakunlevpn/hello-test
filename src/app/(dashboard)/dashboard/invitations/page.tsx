@@ -29,6 +29,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import {
   Copy,
@@ -38,6 +44,8 @@ import {
   Play,
   Loader2,
   Link as LinkIcon,
+  HelpCircle,
+  Globe,
 } from "lucide-react";
 import { t } from "@/i18n";
 import { toast } from "sonner";
@@ -96,7 +104,9 @@ export default function InvitationsPage() {
 
   // Domains state
   const [domains, setDomains] = useState<CustomDomain[]>([]);
+  const [allDomains, setAllDomains] = useState<CustomDomain[]>([]);
   const [selectedDomainId, setSelectedDomainId] = useState<string | null>(null);
+  const [linkModalUrl, setLinkModalUrl] = useState<string | null>(null);
 
   // Form state
   const [name, setName] = useState("");
@@ -125,6 +135,12 @@ export default function InvitationsPage() {
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data) setDomains(data.domains || []);
+      })
+      .catch(() => {});
+    fetch("/api/domains")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data) setAllDomains(data.domains || []);
       })
       .catch(() => {});
   }, [status]);
@@ -188,10 +204,15 @@ export default function InvitationsPage() {
 
   const getLink = (inv: Invitation) => {
     if (inv.domainId) {
-      const domain = domains.find((d) => d.id === inv.domainId);
+      const domain = allDomains.find((d) => d.id === inv.domainId);
       if (domain) return `https://${domain.domain}/i/${inv.code}`;
     }
     return `${window.location.origin}/i/${inv.code}`;
+  };
+
+  const getDomainName = (inv: Invitation) => {
+    if (!inv.domainId) return null;
+    return allDomains.find((d) => d.id === inv.domainId)?.domain ?? null;
   };
 
   const getLastCreatedLink = (inv: Invitation) => {
@@ -403,6 +424,7 @@ export default function InvitationsPage() {
                   <TableHead>{t("status")}</TableHead>
                   <TableHead>{t("invitationViews")}</TableHead>
                   <TableHead>{t("invitationAuths")}</TableHead>
+                  <TableHead>{t("invitationDomain")}</TableHead>
                   <TableHead>{t("invitationLink")}</TableHead>
                   <TableHead>{t("actions")}</TableHead>
                 </TableRow>
@@ -422,6 +444,19 @@ export default function InvitationsPage() {
                     </TableCell>
                     <TableCell>{inv.views}</TableCell>
                     <TableCell>{inv.authentications}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm text-muted-foreground">
+                          {getDomainName(inv) || t("platformDomain")}
+                        </span>
+                        <button
+                          onClick={() => setLinkModalUrl(getLink(inv))}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <HelpCircle className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <Button
                         variant="outline"
@@ -476,6 +511,34 @@ export default function InvitationsPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={!!linkModalUrl} onOpenChange={() => setLinkModalUrl(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Globe className="h-4 w-4" />
+              {t("invitationFullLink")}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 rounded border border-border bg-muted px-3 py-2 text-sm break-all">
+              {linkModalUrl}
+            </code>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (linkModalUrl) {
+                  navigator.clipboard.writeText(linkModalUrl);
+                  toast.success(t("copied"));
+                }
+              }}
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
