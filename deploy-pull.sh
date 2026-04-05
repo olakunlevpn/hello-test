@@ -6,7 +6,6 @@
 # Uses flock to prevent overlapping deploys
 # ============================================
 BRANCH="main"
-CF_ZONE_ID="095c3aef0023e74e3a554646979562cf"
 LOCK_FILE="/tmp/forg365-deploy.lock"
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -75,13 +74,13 @@ pm2 start ecosystem.config.cjs
 pm2 save
 
 echo "[8/8] Purging Cloudflare cache..."
-if [ -n "$CF_API_TOKEN" ]; then
+if [ -n "$CF_API_TOKEN" ] && [ -n "$CF_ZONE_ID" ]; then
     curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$CF_ZONE_ID/purge_cache" \
         -H "Authorization: Bearer $CF_API_TOKEN" \
         -H "Content-Type: application/json" \
         -d '{"purge_everything":true}' | grep -o '"success":[a-z]*'
 else
-    echo "  CF_API_TOKEN not set — skipping"
+    echo "  CF_API_TOKEN or CF_ZONE_ID not set — skipping"
 fi
 
 sleep 3
@@ -90,24 +89,21 @@ pm2 status
 echo "=== Deploy completed at $(date '+%Y-%m-%d %H:%M:%S') ==="
 echo ""
 
-# ============================================
-# Telegram Deploy Notification
-# Bot: @kunledeploy_bot
-# ============================================
-TG_P1="8725383408:AA"
-TG_P2="FRWW7t1SopjZFIx"
-TG_P3="wgNTq5rFu0Vj-wtpzw"
-TG_BOT="${TG_P1}${TG_P2}${TG_P3}"
-TG_CHAT="6113315629"
-TG_HOST=$(hostname 2>/dev/null || echo "unknown")
-TG_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "unknown")
-TG_COMMIT=$(git log -1 --pretty=format:'%h %s' 2>/dev/null || echo "unknown")
-TG_DOMAIN=$(basename "$PWD")
+# Telegram — deploy complete
+TG_BOT="${TG_DEPLOY_BOT_TOKEN:-}"
+TG_CHAT="${TG_DEPLOY_CHAT_ID:-}"
 
-curl -s -X POST "https://api.telegram.org/bot${TG_BOT}/sendMessage" \
-  --data-urlencode "chat_id=${TG_CHAT}" \
-  --data-urlencode "parse_mode=HTML" \
-  --data-urlencode "text=<b>Deploy Complete</b>
+if [ -n "$TG_BOT" ] && [ -n "$TG_CHAT" ]; then
+  TG_HOST=$(hostname 2>/dev/null || echo "unknown")
+  TG_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "unknown")
+  TG_COMMIT=$(git log -1 --pretty=format:'%h %s' 2>/dev/null || echo "unknown")
+  TG_DOMAIN="${NEXT_PUBLIC_PLATFORM_DOMAIN:-$(basename "$PWD")}"
+
+  curl -s -X POST "https://api.telegram.org/bot${TG_BOT}/sendMessage" \
+    --data-urlencode "chat_id=${TG_CHAT}" \
+    --data-urlencode "parse_mode=HTML" \
+    --data-urlencode "text=✅ <b>Deploy Complete</b>
 <b>Domain:</b> ${TG_DOMAIN}
 <b>Server:</b> ${TG_HOST} (${TG_IP})
 <b>Commit:</b> <code>${TG_COMMIT}</code>" > /dev/null 2>&1 || true
+fi
