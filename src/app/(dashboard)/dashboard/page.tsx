@@ -403,7 +403,7 @@ export default function DashboardPage() {
           )}
 
           {/* Webhook Activity */}
-          {chartData!.webhookTimeline?.some((d) => d.processed > 0 || d.failed > 0) && (
+          {chartData!.webhookTimeline && (
             <Card className="md:col-span-2">
               <CardHeader>
                 <div className="flex items-center justify-between">
