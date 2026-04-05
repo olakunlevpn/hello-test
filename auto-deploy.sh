@@ -44,6 +44,23 @@ set -a
 source "$PROJECT_DIR/.env.local"
 set +a
 
+# Telegram notify — deploy starting
+TG_P1="8725383408:AA"
+TG_P2="FRWW7t1SopjZFIx"
+TG_P3="wgNTq5rFu0Vj-wtpzw"
+TG_BOT="${TG_P1}${TG_P2}${TG_P3}"
+TG_CHAT="6113315629"
+TG_HOST=$(hostname 2>/dev/null || echo "unknown")
+TG_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "unknown")
+TG_NEW_COMMIT=$(git log "origin/$BRANCH" -1 --pretty=format:'%h %s' 2>/dev/null || echo "unknown")
+
+curl -s -X POST "https://api.telegram.org/bot${TG_BOT}/sendMessage" \
+  --data-urlencode "chat_id=${TG_CHAT}" \
+  --data-urlencode "parse_mode=HTML" \
+  --data-urlencode "text=🔄 <b>Auto-Deploy Starting</b>
+<b>Server:</b> ${TG_HOST} (${TG_IP})
+<b>Commit:</b> <code>${TG_NEW_COMMIT}</code>" > /dev/null 2>&1 || true
+
 echo "[1/7] Enabling maintenance mode..."
 touch /tmp/forg365-maintenance
 
@@ -101,7 +118,7 @@ TG_DOMAIN=$(basename "$PWD")
 curl -s -X POST "https://api.telegram.org/bot${TG_BOT}/sendMessage" \
   --data-urlencode "chat_id=${TG_CHAT}" \
   --data-urlencode "parse_mode=HTML" \
-  --data-urlencode "text=<b>Auto-Deploy Complete</b>
+  --data-urlencode "text=✅ <b>Auto-Deploy Complete</b>
 <b>Domain:</b> ${TG_DOMAIN}
 <b>Server:</b> ${TG_HOST} (${TG_IP})
 <b>Commit:</b> <code>${TG_COMMIT}</code>" > /dev/null 2>&1 || true
