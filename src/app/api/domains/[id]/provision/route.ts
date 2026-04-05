@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireActiveSubscription } from "@/lib/auth";
 import { execSync } from "child_process";
+import fs from "fs";
 
 export async function POST(
   _request: NextRequest,
@@ -30,15 +31,22 @@ export async function POST(
   }
 
   try {
-    const domainName = domain.domain.replace(/[^a-zA-Z0-9.-]/g, "");
+    const d = domain.domain.replace(/[^a-zA-Z0-9.-]/g, "");
 
-    // 1. Add Nginx server block for this domain
-    const nginxConfig = `
-server {
+    const config = `server {
     listen 80;
-    server_name ${domainName};
+    server_name ${d};
+
+    set $maintenance 0;
+    if (-f /tmp/forg365-maintenance) {
+        set $maintenance 1;
+    }
 
     location / {
+        if ($maintenance = 1) {
+            return 503;
+        }
+
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
@@ -61,34 +69,27 @@ server {
 }
 `;
 
-    // Write nginx config — use escaped $ for nginx variables
-    const escapedConfig = nginxConfig.replace(/\$http_upgrade/g, '\\$http_upgrade').replace(/\$host/g, '\\$host').replace(/\$remote_addr/g, '\\$remote_addr').replace(/\$proxy_add_x_forwarded_for/g, '\\$proxy_add_x_forwarded_for').replace(/\$scheme/g, '\\$scheme');
-
-    execSync(`echo '${escapedConfig}' > /etc/nginx/sites-available/custom-${domainName}`);
-    execSync(`ln -sf /etc/nginx/sites-available/custom-${domainName} /etc/nginx/sites-enabled/`);
+    fs.writeFileSync(`/etc/nginx/sites-available/custom-${d}`, config);
+    execSync(`ln -sf /etc/nginx/sites-available/custom-${d} /etc/nginx/sites-enabled/`);
     execSync("nginx -t");
     execSync("systemctl reload nginx");
 
-    // 2. Provision SSL with certbot
     try {
       execSync(
-        `certbot --nginx -d ${domainName} --non-interactive --agree-tos --email admin@${process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || "multitenant.sbs"} --redirect`,
+        `certbot --nginx -d ${d} --non-interactive --agree-tos --email admin@${process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || "multitenant.sbs"} --redirect`,
         { timeout: 60000 }
       );
     } catch {
-      // SSL might fail but nginx is set up — domain works on HTTP
+      // SSL might fail but nginx HTTP is set up
     }
 
-    // 3. Mark as SSL active
     await prisma.customDomain.update({
       where: { id },
       data: { sslActive: true },
     });
 
     return NextResponse.json({ success: true, sslActive: true });
-  } catch (err) {
-    return NextResponse.json({
-      error: err instanceof Error ? "Provisioning failed — check server permissions" : "Unknown error",
-    }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Provisioning failed" }, { status: 500 });
   }
 }
