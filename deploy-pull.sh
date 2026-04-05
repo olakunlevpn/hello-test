@@ -3,9 +3,11 @@
 # ============================================
 # Forg365 — Manual Deploy Script
 # Usage: bash deploy-pull.sh
+# Uses flock to prevent overlapping deploys
 # ============================================
 BRANCH="main"
 CF_ZONE_ID="095c3aef0023e74e3a554646979562cf"
+LOCK_FILE="/tmp/forg365-deploy.lock"
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 LOG_DIR="${LOG_DIR:-$PROJECT_DIR/logs}"
@@ -14,6 +16,13 @@ TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/deploy.log"
 exec > >(tee -a "$LOG_FILE") 2>&1
+
+# ── Lock: skip if another deploy is already running ──
+exec 200>"$LOCK_FILE"
+if ! flock -n 200; then
+    echo "Another deploy is already running. Wait for it to finish."
+    exit 1
+fi
 
 # ALWAYS remove maintenance file on exit — even if script fails
 cleanup() {
