@@ -321,7 +321,11 @@ export default function InvitationsPage() {
                 onValueChange={(v) => setSelectedDomainId(v === "default" ? null : v)}
               >
                 <SelectTrigger className="w-full max-w-sm">
-                  <SelectValue />
+                  <SelectValue placeholder={t("defaultDomain")}>
+                    {selectedDomainId
+                      ? domains.find((d) => d.id === selectedDomainId)?.domain ?? t("defaultDomain")
+                      : t("defaultDomain")}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="default">{t("defaultDomain")}</SelectItem>
