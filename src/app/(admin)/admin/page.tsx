@@ -29,6 +29,27 @@ import {
 } from "lucide-react";
 import { t } from "@/i18n";
 import { LoadingText } from "@/components/ui/loading-text";
+import { toast } from "sonner";
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from "@/components/ui/chart";
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+} from "recharts";
 
 interface RecentUser {
   id: string;
@@ -53,6 +74,45 @@ interface AdminStats {
   activeWebhooks: number;
   recentUsers: RecentUser[];
 }
+
+interface AdminChartData {
+  userGrowth: { date: string; signups: number }[];
+  revenueTimeline: { date: string; revenue: number }[];
+  accountStatus: { active: number; needsReauth: number; revoked: number };
+  subscriptionStatus: { active: number; expired: number; cancelled: number };
+  subscriptionPlans: { monthly: number; yearly: number };
+  webhookTimeline: { date: string; processed: number; failed: number }[];
+  topUsersByAccounts: { name: string; accounts: number }[];
+}
+
+const userGrowthConfig: ChartConfig = {
+  signups: { label: "Signups", color: "#84cc16" },
+};
+
+const revenueConfig: ChartConfig = {
+  revenue: { label: "Revenue", color: "#22c55e" },
+};
+
+const subscriptionStatusConfig: ChartConfig = {
+  active: { label: "Active", color: "#22c55e" },
+  expired: { label: "Expired", color: "#ef4444" },
+  cancelled: { label: "Cancelled", color: "#6b7280" },
+};
+
+const accountStatusConfig: ChartConfig = {
+  active: { label: "Active", color: "#22c55e" },
+  needsReauth: { label: "Needs Reauth", color: "#ef4444" },
+  revoked: { label: "Revoked", color: "#6b7280" },
+};
+
+const webhookConfig: ChartConfig = {
+  processed: { label: "Processed", color: "#22c55e" },
+  failed: { label: "Failed", color: "#ef4444" },
+};
+
+const topUsersConfig: ChartConfig = {
+  accounts: { label: "Accounts", color: "#84cc16" },
+};
 
 function StatCard({
   icon: Icon,
@@ -101,6 +161,9 @@ export default function AdminDashboardPage() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [chartData, setChartData] = useState<AdminChartData | null>(null);
+  const [chartLoading, setChartLoading] = useState(true);
+
   useEffect(() => {
     fetch("/api/admin/stats")
       .then((r) => r.json())
@@ -109,6 +172,20 @@ export default function AdminDashboardPage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
+
+    fetch("/api/admin/charts")
+      .then((r) => {
+        if (!r.ok) throw new Error("chart fetch failed");
+        return r.json();
+      })
+      .then((data: AdminChartData) => {
+        setChartData(data);
+        setChartLoading(false);
+      })
+      .catch(() => {
+        toast.error(t("loadFailed"));
+        setChartLoading(false);
+      });
   }, []);
 
   if (loading || !stats) {
@@ -118,6 +195,35 @@ export default function AdminDashboardPage() {
       </div>
     );
   }
+
+  const hasChartData =
+    chartData &&
+    (chartData.userGrowth.some((d) => d.signups > 0) ||
+      chartData.revenueTimeline.some((d) => d.revenue > 0) ||
+      chartData.accountStatus.active > 0 ||
+      chartData.accountStatus.needsReauth > 0 ||
+      chartData.accountStatus.revoked > 0 ||
+      chartData.subscriptionStatus.active > 0 ||
+      chartData.subscriptionStatus.expired > 0 ||
+      chartData.subscriptionStatus.cancelled > 0 ||
+      chartData.webhookTimeline.some((d) => d.processed > 0 || d.failed > 0) ||
+      chartData.topUsersByAccounts.length > 0);
+
+  const subscriptionPieData = chartData
+    ? [
+        { name: "Active", value: chartData.subscriptionStatus.active, fill: "#22c55e" },
+        { name: "Expired", value: chartData.subscriptionStatus.expired, fill: "#ef4444" },
+        { name: "Cancelled", value: chartData.subscriptionStatus.cancelled, fill: "#6b7280" },
+      ].filter((d) => d.value > 0)
+    : [];
+
+  const accountStatusPieData = chartData
+    ? [
+        { name: "Active", value: chartData.accountStatus.active, fill: "#22c55e" },
+        { name: "Needs Reauth", value: chartData.accountStatus.needsReauth, fill: "#ef4444" },
+        { name: "Revoked", value: chartData.accountStatus.revoked, fill: "#6b7280" },
+      ].filter((d) => d.value > 0)
+    : [];
 
   return (
     <div className="space-y-6">
@@ -204,6 +310,172 @@ export default function AdminDashboardPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {!chartLoading && hasChartData && (
+        <div className="grid grid-cols-2 gap-4">
+          {/* User Growth */}
+          {chartData!.userGrowth.some((d) => d.signups > 0) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>User Growth</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={userGrowthConfig}>
+                  <AreaChart data={chartData!.userGrowth}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Area
+                      type="monotone"
+                      dataKey="signups"
+                      stroke="#84cc16"
+                      fill="#84cc16"
+                      fillOpacity={0.2}
+                    />
+                  </AreaChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Revenue */}
+          {chartData!.revenueTimeline.some((d) => d.revenue > 0) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Revenue</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={revenueConfig}>
+                  <AreaChart data={chartData!.revenueTimeline}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Area
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="#22c55e"
+                      fill="#22c55e"
+                      fillOpacity={0.2}
+                    />
+                  </AreaChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Subscription Breakdown */}
+          {subscriptionPieData.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Subscription Breakdown</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={subscriptionStatusConfig}>
+                  <PieChart>
+                    <Pie
+                      data={subscriptionPieData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={80}
+                    >
+                      {subscriptionPieData.map((entry, index) => (
+                        <Cell key={index} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <ChartLegend content={<ChartLegendContent />} />
+                  </PieChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Account Status */}
+          {accountStatusPieData.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Account Status</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={accountStatusConfig}>
+                  <PieChart>
+                    <Pie
+                      data={accountStatusPieData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={80}
+                    >
+                      {accountStatusPieData.map((entry, index) => (
+                        <Cell key={index} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <ChartLegend content={<ChartLegendContent />} />
+                  </PieChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Webhook Activity */}
+          {chartData!.webhookTimeline.some((d) => d.processed > 0 || d.failed > 0) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Webhook Activity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={webhookConfig}>
+                  <BarChart data={chartData!.webhookTimeline}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <ChartLegend content={<ChartLegendContent />} />
+                    <Bar dataKey="processed" stackId="a" fill="#22c55e" />
+                    <Bar dataKey="failed" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Top Users by Accounts */}
+          {chartData!.topUsersByAccounts.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Top Users by Accounts</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={topUsersConfig}>
+                  <BarChart
+                    data={chartData!.topUsersByAccounts}
+                    layout="vertical"
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" tick={{ fontSize: 10 }} />
+                    <YAxis
+                      type="category"
+                      dataKey="name"
+                      tick={{ fontSize: 10 }}
+                      width={120}
+                    />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="accounts" fill="#84cc16" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
     </div>
   );
 }
