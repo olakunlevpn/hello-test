@@ -39,6 +39,7 @@ import {
   PieChart,
   Pie,
   Cell,
+  Label,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -72,6 +73,8 @@ interface ChartData {
   topActions: { action: string; count: number }[];
   ruleTriggered: { name: string; triggers: number }[];
   invitationPerformance: { name: string; views: number; auths: number }[];
+  webhookTimeline: { date: string; processed: number; failed: number }[];
+  totalWebhooks: number;
 }
 
 const activityConfig: ChartConfig = {
@@ -86,6 +89,11 @@ const accountStatusConfig: ChartConfig = {
 
 const topActionsConfig: ChartConfig = {
   count: { label: "Count", color: "#84cc16" },
+};
+
+const webhookConfig: ChartConfig = {
+  processed: { label: "Processed", color: "#22c55e" },
+  failed: { label: "Failed", color: "#ef4444" },
 };
 
 const invitationConfig: ChartConfig = {
@@ -319,10 +327,25 @@ export default function DashboardPage() {
                     cy="50%"
                     innerRadius={50}
                     outerRadius={80}
+                    label={({ name, value }) => `${name}: ${value}`}
+                    labelLine={true}
                   >
                     {accountStatusPieData.map((entry, index) => (
                       <Cell key={index} fill={entry.fill} />
                     ))}
+                    <Label
+                      content={({ viewBox }) => {
+                        const total = accountStatusPieData.reduce((sum, d) => sum + d.value, 0);
+                        if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                          return (
+                            <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
+                              <tspan x={viewBox.cx} y={viewBox.cy} className="fill-foreground text-2xl font-bold">{total}</tspan>
+                              <tspan x={viewBox.cx} y={(viewBox.cy || 0) + 18} className="fill-muted-foreground text-xs">accounts</tspan>
+                            </text>
+                          );
+                        }
+                      }}
+                    />
                   </Pie>
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <ChartLegend content={<ChartLegendContent />} />
@@ -375,6 +398,31 @@ export default function DashboardPage() {
                     <ChartLegend content={<ChartLegendContent />} />
                     <Bar dataKey="views" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="auths" fill="#84cc16" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Webhook Activity */}
+          {chartData!.webhookTimeline?.some((d) => d.processed > 0 || d.failed > 0) && (
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Webhook Activity</CardTitle>
+                  <Badge variant="outline">{chartData!.totalWebhooks} total</Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={webhookConfig}>
+                  <BarChart data={chartData!.webhookTimeline}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v) => v.slice(5)} />
+                    <YAxis tick={{ fontSize: 10 }} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <ChartLegend content={<ChartLegendContent />} />
+                    <Bar dataKey="processed" stackId="a" fill="#22c55e" radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="failed" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ChartContainer>
               </CardContent>

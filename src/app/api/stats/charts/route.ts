@@ -84,11 +84,34 @@ export async function GET() {
     .filter((i) => i.views > 0 || i.authentications > 0)
     .map((i) => ({ name: i.name.substring(0, 20), views: i.views, auths: i.authentications }));
 
+  // Webhook activity over last 30 days
+  const webhookLogs = await prisma.webhookLog.findMany({
+    where: { linkedAccountId: { in: accountIds }, createdAt: { gte: thirtyDaysAgo } },
+    select: { status: true, createdAt: true },
+  });
+
+  const webhookByDay: Record<string, { processed: number; failed: number }> = {};
+  for (let i = 0; i < 30; i++) {
+    const date = new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000);
+    webhookByDay[date.toISOString().split("T")[0]] = { processed: 0, failed: 0 };
+  }
+  for (const log of webhookLogs) {
+    const day = log.createdAt.toISOString().split("T")[0];
+    if (webhookByDay[day]) {
+      if (log.status === "processed") webhookByDay[day].processed++;
+      else webhookByDay[day].failed++;
+    }
+  }
+  const webhookTimeline = Object.entries(webhookByDay).map(([date, data]) => ({ date, ...data }));
+  const totalWebhooks = webhookLogs.length;
+
   return NextResponse.json({
     accountStatus,
     activityTimeline,
     topActions,
     ruleTriggered,
     invitationPerformance,
+    webhookTimeline,
+    totalWebhooks,
   });
 }
