@@ -15,8 +15,14 @@ export async function GET() {
   }
 
   try {
+    // Return user's own domains + all global (admin) domains that are verified
     const domains = await prisma.customDomain.findMany({
-      where: { userId },
+      where: {
+        OR: [
+          { userId },
+          { isGlobal: true, verified: true },
+        ],
+      },
       orderBy: { createdAt: "desc" },
     });
 

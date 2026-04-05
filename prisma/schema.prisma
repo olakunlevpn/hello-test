@@ -270,6 +270,7 @@ model CustomDomain {
   domain      String       @unique
   verified    Boolean      @default(false)
   sslActive   Boolean      @default(false)
+  isGlobal    Boolean      @default(false)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   invitations Invitation[]

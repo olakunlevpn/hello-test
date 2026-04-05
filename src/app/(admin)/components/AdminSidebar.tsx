@@ -9,6 +9,7 @@ import {
   Link2,
   Settings,
   ArrowLeft,
+  Globe,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { t } from "@/i18n";
@@ -18,6 +19,7 @@ const navItems = [
   { href: "/admin/users", icon: Users, label: "adminUsers" as const },
   { href: "/admin/payments", icon: CreditCard, label: "adminPayments" as const },
   { href: "/admin/accounts", icon: Link2, label: "adminAccounts" as const },
+  { href: "/admin/domains", icon: Globe, label: "customDomains" as const },
   { href: "/admin/settings", icon: Settings, label: "adminSettings" as const },
 ];
 
