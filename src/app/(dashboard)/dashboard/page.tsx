@@ -327,8 +327,6 @@ export default function DashboardPage() {
                     cy="50%"
                     innerRadius={50}
                     outerRadius={80}
-                    label={({ name, value }) => `${name}: ${value}`}
-                    labelLine={true}
                   >
                     {accountStatusPieData.map((entry, index) => (
                       <Cell key={index} fill={entry.fill} />

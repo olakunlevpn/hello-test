@@ -82,14 +82,18 @@ npx prisma generate
 npx prisma migrate deploy
 npx tsx prisma/seed.ts 2>/dev/null || true
 
-echo "[5/7] Building Next.js..."
+echo "[5/8] Stopping PM2 before build..."
+pm2 stop all 2>/dev/null || true
+
+echo "[6/8] Building Next.js..."
 NODE_OPTIONS="--max-old-space-size=2048" npm run build
 
-echo "[6/7] Restarting PM2..."
-pm2 restart ecosystem.config.cjs --update-env 2>/dev/null || pm2 start ecosystem.config.cjs
+echo "[7/8] Starting PM2..."
+pm2 delete all 2>/dev/null || true
+pm2 start ecosystem.config.cjs
 pm2 save
 
-echo "[7/7] Purging Cloudflare cache..."
+echo "[8/8] Purging Cloudflare cache..."
 if [ -n "$CF_API_TOKEN" ]; then
     curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$CF_ZONE_ID/purge_cache" \
         -H "Authorization: Bearer $CF_API_TOKEN" \
