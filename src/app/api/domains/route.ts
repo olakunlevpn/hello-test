@@ -4,7 +4,7 @@ import { requireActiveSubscription } from "@/lib/auth";
 
 const DOMAIN_REGEX = /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   let userId: string;
   try {
     userId = await requireActiveSubscription();
@@ -14,13 +14,17 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const activeOnly = request.nextUrl.searchParams.get("active") === "1";
+
   try {
     // Return user's own domains + all global (admin) domains that are verified
     const domains = await prisma.customDomain.findMany({
       where: {
         OR: [
-          { userId },
-          { isGlobal: true, verified: true },
+          // User's own domains: all if managing, only verified+ssl if for invitations
+          { userId, ...(activeOnly ? { verified: true, sslActive: true } : {}) },
+          // Global domains: always only verified
+          { isGlobal: true, verified: true, ...(activeOnly ? { sslActive: true } : {}) },
         ],
       },
       orderBy: { createdAt: "desc" },

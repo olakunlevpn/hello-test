@@ -121,7 +121,7 @@ export default function InvitationsPage() {
   useEffect(() => {
     if (status !== "authenticated") return;
     loadInvitations();
-    fetch("/api/domains")
+    fetch("/api/domains?active=1")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data) setDomains(data.domains || []);
