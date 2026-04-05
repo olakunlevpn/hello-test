@@ -9,6 +9,10 @@ export const webhookProcessingQueue = new Queue("webhook-processing", {
   connection: redis,
 });
 
+export const domainCheckQueue = new Queue("domain-check", {
+  connection: redis,
+});
+
 export async function setupRecurringJobs(): Promise<void> {
   // Urgent refresh: every 10 minutes — catches tokens expiring within 15 minutes
   await tokenRefreshQueue.upsertJobScheduler("refresh-all", {
@@ -24,5 +28,10 @@ export async function setupRecurringJobs(): Promise<void> {
   // Webhook renewal: every 48 hours
   await webhookProcessingQueue.upsertJobScheduler("renew-webhooks", {
     every: 48 * 60 * 60 * 1000, // 48 hours
+  });
+
+  // Domain DNS verification: every 5 minutes
+  await domainCheckQueue.upsertJobScheduler("check-domains", {
+    every: 5 * 60 * 1000, // 5 minutes
   });
 }

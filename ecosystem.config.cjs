@@ -49,5 +49,15 @@ module.exports = {
       autorestart: true,
       max_memory_restart: "512M",
     },
+    {
+      name: "forg365-domain-worker",
+      script: "node_modules/.bin/tsx",
+      args: "src/workers/domain-check.worker.ts",
+      cwd: __dirname,
+      interpreter: "none",
+      env: { NODE_ENV: "production", ...env },
+      autorestart: true,
+      max_memory_restart: "256M",
+    },
   ],
 };
