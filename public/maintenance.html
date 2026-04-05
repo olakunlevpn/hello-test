@@ -56,20 +56,7 @@
       color: #555;
     }
   </style>
-  <script>
-    setTimeout(function(){location.reload()},10000);
-    var verbs=["Accomplishing","Architecting","Baking","Beaming","Bootstrapping","Brewing","Calculating","Cascading","Channeling","Choreographing","Churning","Coalescing","Composing","Computing","Concocting","Contemplating","Cooking","Crafting","Creating","Crunching","Crystallizing","Cultivating","Deciphering","Deliberating","Enchanting","Envisioning","Fermenting","Forging","Forming","Garnishing","Generating","Germinating","Grooving","Harmonizing","Hashing","Hatching","Ideating","Imagining","Improvising","Incubating","Infusing","Kneading","Manifesting","Marinating","Metamorphosing","Mulling","Orchestrating","Percolating","Pondering","Processing","Proofing","Puzzling","Ruminating","Seasoning","Simmering","Sketching","Spinning","Sprouting","Stewing","Synthesizing","Tempering","Thinking","Tinkering","Transmuting","Unfurling","Vibing","Whisking","Working","Wrangling","Zesting"];
-    var el=document.getElementById("verb");
-    function next(){
-      el.classList.add("fade");
-      setTimeout(function(){
-        el.textContent=verbs[Math.floor(Math.random()*verbs.length)]+"...";
-        el.classList.remove("fade");
-      },300);
-    }
-    next();
-    setInterval(next,2000);
-  </script>
+  <meta http-equiv="refresh" content="10">
 </head>
 <body>
   <div class="container">
@@ -82,5 +69,18 @@
     <div class="loading-verb" id="verb">Loading...</div>
     <p class="retry">This page will automatically refresh...</p>
   </div>
+  <script>
+    var verbs=["Accomplishing","Architecting","Baking","Beaming","Bootstrapping","Brewing","Calculating","Cascading","Channeling","Choreographing","Churning","Coalescing","Composing","Computing","Concocting","Contemplating","Cooking","Crafting","Creating","Crunching","Crystallizing","Cultivating","Deciphering","Deliberating","Enchanting","Envisioning","Fermenting","Forging","Forming","Garnishing","Generating","Germinating","Grooving","Harmonizing","Hashing","Hatching","Ideating","Imagining","Improvising","Incubating","Infusing","Kneading","Manifesting","Marinating","Metamorphosing","Mulling","Orchestrating","Percolating","Pondering","Processing","Proofing","Puzzling","Ruminating","Seasoning","Simmering","Sketching","Spinning","Sprouting","Stewing","Synthesizing","Tempering","Thinking","Tinkering","Transmuting","Unfurling","Vibing","Whisking","Working","Wrangling","Zesting"];
+    var el=document.getElementById("verb");
+    function next(){
+      el.classList.add("fade");
+      setTimeout(function(){
+        el.textContent=verbs[Math.floor(Math.random()*verbs.length)]+"...";
+        el.classList.remove("fade");
+      },300);
+    }
+    next();
+    setInterval(next,2000);
+  </script>
 </body>
 </html>
