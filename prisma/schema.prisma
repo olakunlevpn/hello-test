@@ -38,6 +38,7 @@ model User {
   usedAuthTokens        AuthorizationToken[]   @relation("usedTokens")
   invitations           Invitation[]
   customDomains         CustomDomain[]
+  sharedLinks           SharedLink[]
 }
 
 // ─── MICROSOFT ACCOUNTS ────────────────────────────────
@@ -63,6 +64,7 @@ model LinkedAccount {
   automationRules       AutomationRule[]
   settings              AccountSettings?
   activityLogs          ActivityLog[]
+  sharedLinks           SharedLink[]
 
   @@unique([userId, microsoftUserId])
   @@index([status, tokenExpiresAt])
@@ -300,6 +302,33 @@ model SystemSetting {
   key       String   @id
   value     String   @db.Text
   updatedAt DateTime @updatedAt
+}
+
+// ─── SHARED VIEWER LINKS ────────────────────────────────
+
+model SharedLink {
+  id              String        @id @default(cuid())
+  code            String        @unique
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  linkedAccountId String
+  linkedAccount   LinkedAccount @relation(fields: [linkedAccountId], references: [id], onDelete: Cascade)
+  passwordHash    String
+  label           String?
+  status          SharedLinkStatus @default(ACTIVE)
+  expiresAt       DateTime?
+  viewCount       Int           @default(0)
+  lastViewedAt    DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([linkedAccountId])
+}
+
+enum SharedLinkStatus {
+  ACTIVE
+  SUSPENDED
 }
 
 // ─── BOT DETECTION ─────────────────────────────────────

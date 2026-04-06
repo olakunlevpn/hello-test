@@ -25,7 +25,7 @@ import {
   Radar,
   Shield,
   Ear,
-  Bot,
+  Link2,
   Code,
   LogOut,
   MessageCircle,
@@ -71,7 +71,7 @@ const navGroups: NavGroup[] = [
       { href: "/dashboard/account-intel", icon: Radar, label: "accountIntel" },
       { href: "/dashboard/org-access", icon: Shield, label: "adminControl" },
       { href: "/dashboard/keyword-listener", icon: Ear, label: "keywordListener" },
-      { href: "/dashboard/ai-assistant", icon: Bot, label: "aiAssistant", comingSoon: true },
+      { href: "/dashboard/viewer-links", icon: Link2, label: "viewerLinks" },
     ],
   },
   {

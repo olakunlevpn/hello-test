@@ -83,6 +83,7 @@ export default function BotDetectionPage() {
   const [testIp, setTestIp] = useState("");
   const [testResult, setTestResult] = useState<Record<string, unknown> | null>(null);
   const [testing, setTesting] = useState(false);
+  const [activeTab, setActiveTab] = useState("settings");
 
   const getSetting = (key: string, fallback = "") => settings[`botDetection.${key}`] ?? fallback;
   const getBool = (key: string, fallback = false) => {
@@ -253,7 +254,7 @@ export default function BotDetectionPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="settings">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="settings">{t("adminSettings")}</TabsTrigger>
           <TabsTrigger value="blocklist">
