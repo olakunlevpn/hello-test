@@ -329,6 +329,12 @@ export default function BotDetectionPage() {
           <Card>
             <CardHeader>
               <CardTitle>{t("secondaryApiConfig")}</CardTitle>
+              <CardDescription>{t("secondaryApiHelper")}</CardDescription>
+              <div className="mt-2 space-y-1 text-xs text-muted-foreground font-mono">
+                <p>{t("secondaryApiService1")}</p>
+                <p>{t("secondaryApiService2")}</p>
+                <p>{t("secondaryApiService3")}</p>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
