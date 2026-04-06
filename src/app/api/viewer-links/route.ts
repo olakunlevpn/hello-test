@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ link, code }, { status: 201 });
-  } catch {
+  } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Failed to create link" }, { status: 500 });
   }
 }
