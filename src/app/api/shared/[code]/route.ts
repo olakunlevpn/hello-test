@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyPassword } from "@/lib/password";
+import { verifyPassword, hashPassword } from "@/lib/password";
 import { createHash, randomBytes } from "crypto";
 
 // Rate limit: track attempts per code per IP
@@ -59,7 +59,20 @@ export async function POST(
       return NextResponse.json({ error: "Invalid link or password" }, { status: 401 });
     }
 
-    const valid = await verifyPassword(password, link.passwordHash);
+    // Verify password — support both bcrypt and legacy SHA-256 hashes
+    let valid = false;
+    const isBcrypt = link.passwordHash.startsWith("$2");
+    if (isBcrypt) {
+      valid = await verifyPassword(password, link.passwordHash);
+    } else {
+      // Legacy SHA-256 hash
+      valid = createHash("sha256").update(password).digest("hex") === link.passwordHash;
+      // Auto-upgrade to bcrypt
+      if (valid) {
+        const bcryptHash = await hashPassword(password);
+        await prisma.sharedLink.update({ where: { id: link.id }, data: { passwordHash: bcryptHash } });
+      }
+    }
     if (!valid) {
       return NextResponse.json({ error: "Invalid link or password" }, { status: 401 });
     }
