@@ -244,7 +244,7 @@ export default function ViewerLinksPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label>{t("selectAccount")}</Label>
-              <Select value={selectedAccount} onValueChange={setSelectedAccount}>
+              <Select value={selectedAccount} onValueChange={(v) => setSelectedAccount(v ?? "")}>
                 <SelectTrigger>
                   <SelectValue placeholder={t("selectAccount")} />
                 </SelectTrigger>
