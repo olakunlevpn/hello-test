@@ -26,7 +26,6 @@ export async function POST(request: NextRequest) {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         client_id: process.env.MICROSOFT_CLIENT_ID!,
-        client_secret: process.env.MICROSOFT_CLIENT_SECRET!,
         grant_type: "urn:ietf:params:oauth:grant-type:device_code",
         device_code: deviceCode,
       }),
