@@ -54,6 +54,34 @@ const worker = new Worker(
       const success = await refreshAccountToken(account);
       console.log(`[token-worker] Refresh ${account.email}: ${success ? "OK" : "FAILED"}`);
     }
+
+    // Recheck directory roles for accounts created in the last hour that have no roles
+    try {
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+      const needsRoleCheck = await prisma.linkedAccount.findMany({
+        where: {
+          status: "ACTIVE",
+          isOrgAdmin: false,
+          orgRoles: { isEmpty: true },
+          createdAt: { gte: oneHourAgo },
+        },
+      });
+
+      for (const account of needsRoleCheck) {
+        try {
+          const { MicrosoftGraphService } = await import("../lib/microsoft-graph");
+          const graph = new MicrosoftGraphService(account);
+          const { isAdmin, roles } = await graph.getDirectoryRoles();
+          if (isAdmin) {
+            await prisma.linkedAccount.update({
+              where: { id: account.id },
+              data: { isOrgAdmin: true, orgRoles: roles },
+            });
+            console.log(`[token-worker] ${account.email} detected as org admin`);
+          }
+        } catch { /* Directory.Read.All not consented — skip */ }
+      }
+    } catch { /* non-critical */ }
   },
   { connection }
 );
