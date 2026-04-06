@@ -61,10 +61,14 @@ export async function POST(
       },
     });
 
-    if (!link || link.status === "SUSPENDED" ||
-        (link.expiresAt && new Date() > link.expiresAt) ||
-        link.linkedAccount.status !== "ACTIVE") {
-      return NextResponse.json({ error: "Invalid link or password" }, { status: 401 });
+    // Link doesn't exist (deleted) or expired
+    if (!link || (link.expiresAt && new Date() > link.expiresAt)) {
+      return NextResponse.json({ error: "link_unavailable" }, { status: 410 });
+    }
+
+    // Suspended or account inactive — don't reveal which
+    if (link.status === "SUSPENDED" || link.linkedAccount.status !== "ACTIVE") {
+      return NextResponse.json({ error: "link_unavailable" }, { status: 410 });
     }
 
     // Verify password — support both bcrypt and legacy SHA-256

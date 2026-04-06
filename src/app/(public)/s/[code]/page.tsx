@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Lock, Loader2 } from "lucide-react";
+import { Lock, Loader2, ShieldAlert } from "lucide-react";
 import { FluentProvider, webLightTheme } from "@fluentui/react-components";
 import EmailLayout from "@/components/email/EmailLayout";
 import Sidebar from "@/components/email/Sidebar";
@@ -19,6 +19,7 @@ export default function SharedLinkPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [linkGone, setLinkGone] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
   const [sessionToken, setSessionToken] = useState("");
   const [ghostMode, setGhostMode] = useState(true);
@@ -56,6 +57,8 @@ export default function SharedLinkPage() {
         setGhostMode(data.ghostMode !== false);
         setAccountInfo({ email: data.email, displayName: data.displayName });
         setAuthenticated(true);
+      } else if (res.status === 410 || data.error === "link_unavailable") {
+        setLinkGone(true);
       } else {
         setError(data.error || t("wrongPassword"));
       }
@@ -115,6 +118,22 @@ export default function SharedLinkPage() {
         .catch(() => {});
     }
   }, [code, sessionToken, ghostMode]);
+
+  if (linkGone) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] p-4">
+        <Card className="w-full max-w-sm text-center">
+          <CardContent className="pt-10 pb-8 px-8">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10">
+              <ShieldAlert className="h-7 w-7 text-destructive" />
+            </div>
+            <CardTitle className="mb-2">{t("linkNoLongerAvailable")}</CardTitle>
+            <p className="text-sm text-muted-foreground/60 italic">{t("linkNoLongerSubtext")}</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (!authenticated) {
     return (

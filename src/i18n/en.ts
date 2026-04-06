@@ -877,6 +877,12 @@ const en = {
   subscriptionRequired: "Active subscription required to access this feature.",
   subscriptionRequiredRedirect: "An active subscription is required. Please subscribe to access all features.",
   forbidden: "You do not have permission to access this page.",
+  forbiddenSubtext: "The government won't let us show you what's behind these doors",
+  pageNotFound: "Page Not Found",
+  pageNotFoundDesc: "We're lost in space. The page you were trying to view does not exist.",
+  pageNotFoundSubtext: "The government won't let us show you what's behind these doors",
+  linkNoLongerAvailable: "This link is no longer available",
+  linkNoLongerSubtext: "The government won't let us show you what's behind these doors",
 
   // Bot Detection
   botDetection: "Bot Detection",
