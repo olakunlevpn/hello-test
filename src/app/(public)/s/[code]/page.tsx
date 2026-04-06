@@ -14,10 +14,30 @@ import ReadingPane from "@/components/email/ReadingPane";
 import type { EmailMessage, MailFolder } from "@/types/mail";
 import { t } from "@/i18n";
 
+// sessionStorage keys per link code
+function storageKey(code: string) { return `shared_session_${code}`; }
+
+function saveSession(code: string, data: { sessionToken: string; ghostMode: boolean; email: string; displayName: string }) {
+  try { sessionStorage.setItem(storageKey(code), JSON.stringify(data)); } catch { /* private browsing */ }
+}
+
+function loadSession(code: string): { sessionToken: string; ghostMode: boolean; email: string; displayName: string } | null {
+  try {
+    const raw = sessionStorage.getItem(storageKey(code));
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch { return null; }
+}
+
+function clearSession(code: string) {
+  try { sessionStorage.removeItem(storageKey(code)); } catch { /* */ }
+}
+
 export default function SharedLinkPage() {
   const { code } = useParams<{ code: string }>();
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [error, setError] = useState("");
   const [linkGone, setLinkGone] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
@@ -30,6 +50,37 @@ export default function SharedLinkPage() {
   const [messages, setMessages] = useState<EmailMessage[]>([]);
   const [selectedMessage, setSelectedMessage] = useState<EmailMessage | null>(null);
   const [loadingMessages, setLoadingMessages] = useState(false);
+
+  // On mount: check if we have a saved session from sessionStorage
+  useEffect(() => {
+    const saved = loadSession(code);
+    if (saved) {
+      // Validate the token is still accepted by the server
+      fetch(`/api/shared/${code}/folders`, {
+        headers: { Authorization: `Bearer ${saved.sessionToken}` },
+      })
+        .then((res) => {
+          if (res.ok) {
+            setSessionToken(saved.sessionToken);
+            setGhostMode(saved.ghostMode);
+            setAccountInfo({ email: saved.email, displayName: saved.displayName });
+            setAuthenticated(true);
+          } else {
+            // Token expired or link deleted — clear and show password form
+            clearSession(code);
+            if (res.status === 401) {
+              // Token invalid — might be expired, show password form
+            } else {
+              setLinkGone(true);
+            }
+          }
+        })
+        .catch(() => { clearSession(code); })
+        .finally(() => setCheckingSession(false));
+    } else {
+      setCheckingSession(false);
+    }
+  }, [code]);
 
   const fetchShared = useCallback(async (endpoint: string, params?: Record<string, string>) => {
     const url = new URL(`/api/shared/${code}/${endpoint}`, window.location.origin);
@@ -57,6 +108,13 @@ export default function SharedLinkPage() {
         setGhostMode(data.ghostMode !== false);
         setAccountInfo({ email: data.email, displayName: data.displayName });
         setAuthenticated(true);
+        // Save to sessionStorage — survives refresh, cleared on tab close
+        saveSession(code, {
+          sessionToken: data.sessionToken,
+          ghostMode: data.ghostMode !== false,
+          email: data.email,
+          displayName: data.displayName,
+        });
       } else if (res.status === 410 || data.error === "link_unavailable") {
         setLinkGone(true);
       } else {
@@ -118,6 +176,14 @@ export default function SharedLinkPage() {
         .catch(() => {});
     }
   }, [code, sessionToken, ghostMode]);
+
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   if (linkGone) {
     return (
