@@ -302,6 +302,36 @@ model SystemSetting {
   updatedAt DateTime @updatedAt
 }
 
+// ─── BOT DETECTION ─────────────────────────────────────
+
+model BotLog {
+  id          String   @id @default(cuid())
+  ip          String
+  userAgent   String?  @db.Text
+  path        String
+  reason      String
+  provider    String?
+  country     String?
+  isp         String?
+  asn         String?
+  blockScore  Int?
+  action      String   @default("blocked")
+  createdAt   DateTime @default(now())
+
+  @@index([ip, createdAt])
+  @@index([createdAt])
+  @@index([action, createdAt])
+}
+
+model BlockedIp {
+  id        String   @id @default(cuid())
+  ip        String   @unique
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@index([ip])
+}
+
 // ─── DEBUGGING ──────────────────────────────────────────
 
 model WebhookLog {
