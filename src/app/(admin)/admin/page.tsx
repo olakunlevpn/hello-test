@@ -226,7 +226,9 @@ export default function AdminDashboardPage() {
       chartData.subscriptionStatus.expired > 0 ||
       chartData.subscriptionStatus.cancelled > 0 ||
       chartData.webhookTimeline.some((d) => d.processed > 0 || d.failed > 0) ||
-      chartData.topUsersByAccounts.length > 0);
+      chartData.topUsersByAccounts.length > 0 ||
+      chartData.botBlocksTotal > 0 ||
+      chartData.botBlocksByDay?.some((d) => d.blocked > 0));
 
   const subscriptionPieData = chartData
     ? [
@@ -289,19 +291,31 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Bot Detection Stats */}
-      {chartData && chartData.botBlocksTotal > 0 && (
-        <div className="grid grid-cols-2 gap-4">
+      {chartData && (
+        <div className="grid grid-cols-4 gap-4">
           <StatCard
             icon={Shield}
-            label={t("blockedToday")}
-            value={chartData.botBlocksToday}
+            label={t("botDetection")}
+            value={chartData.botBlocksTotal}
             iconClass="text-orange-500"
           />
           <StatCard
             icon={Ban}
-            label={t("blockedThisMonth")}
-            value={chartData.botBlocksTotal}
+            label={t("blockedToday")}
+            value={chartData.botBlocksToday}
             iconClass="text-red-500"
+          />
+          <StatCard
+            icon={Shield}
+            label={t("topBlockedCountries")}
+            value={chartData.botTopCountries?.length || 0}
+            iconClass="text-yellow-500"
+          />
+          <StatCard
+            icon={Ban}
+            label={t("blockReasons")}
+            value={chartData.botReasonBreakdown?.length || 0}
+            iconClass="text-purple-500"
           />
         </div>
       )}
