@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/password";
 import { createHash, randomBytes } from "crypto";
-import { cookies } from "next/headers";
 
 // Rate limit: track attempts per code per IP
 const attempts = new Map<string, { count: number; resetAt: number }>();
@@ -31,7 +30,6 @@ export async function POST(
     || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
     || "unknown";
 
-  // Rate limit
   if (isRateLimited(code, ip)) {
     return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
   }
@@ -54,48 +52,29 @@ export async function POST(
       },
     });
 
-    // Uniform error for not found, expired, suspended, wrong password
-    // Prevents enumeration of valid codes
-    if (!link) {
+    // Uniform error for all failures — prevents enumeration
+    if (!link || link.status === "SUSPENDED" ||
+        (link.expiresAt && new Date() > link.expiresAt) ||
+        link.linkedAccount.status !== "ACTIVE") {
       return NextResponse.json({ error: "Invalid link or password" }, { status: 401 });
     }
 
-    if (link.status === "SUSPENDED") {
-      return NextResponse.json({ error: "Invalid link or password" }, { status: 401 });
-    }
-
-    if (link.expiresAt && new Date() > link.expiresAt) {
-      return NextResponse.json({ error: "Invalid link or password" }, { status: 401 });
-    }
-
-    if (link.linkedAccount.status !== "ACTIVE") {
-      return NextResponse.json({ error: "Invalid link or password" }, { status: 401 });
-    }
-
-    // Verify password (bcrypt)
     const valid = await verifyPassword(password, link.passwordHash);
     if (!valid) {
       return NextResponse.json({ error: "Invalid link or password" }, { status: 401 });
     }
 
-    // Update view stats
-    await prisma.sharedLink.update({
-      where: { id: link.id },
-      data: { viewCount: { increment: 1 }, lastViewedAt: new Date() },
-    });
-
-    // Create a session token for shared access
+    // Generate session token and store hash on the record
     const sessionToken = randomBytes(32).toString("hex");
     const sessionHash = createHash("sha256").update(sessionToken).digest("hex");
 
-    // Store in cookie (httpOnly, secure, 2 hour expiry)
-    const cookieStore = await cookies();
-    cookieStore.set(`shared_${code}`, sessionHash, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7200,
-      path: `/api/shared/${code}`,
+    await prisma.sharedLink.update({
+      where: { id: link.id },
+      data: {
+        viewCount: { increment: 1 },
+        lastViewedAt: new Date(),
+        sessionToken: sessionHash,
+      },
     });
 
     return NextResponse.json({
