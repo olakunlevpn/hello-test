@@ -11,7 +11,6 @@ export interface BotDetectionConfig {
   uaDetectionEnabled: boolean;
   cacheTtlSeconds: number;
   failOpen: boolean;
-  protectAllPages: boolean;
   trustedIsps: string[];
   allowedAsns: number[];
 }
@@ -64,7 +63,6 @@ function parseConfig(map: Record<string, string>): BotDetectionConfig {
     uaDetectionEnabled: map["botDetection.uaDetection.enabled"] !== "false", // default true
     cacheTtlSeconds: parseInt(map["botDetection.cacheTtlSeconds"] || "86400", 10),
     failOpen: map["botDetection.failOpen"] !== "false", // default true
-    protectAllPages: map["botDetection.protectAllPages"] === "true",
     trustedIsps,
     allowedAsns,
   };

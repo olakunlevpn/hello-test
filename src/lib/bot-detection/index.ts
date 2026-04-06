@@ -20,8 +20,11 @@ export interface BotCheckResult {
 const PRIVATE_IP_REGEX = /^(127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|::1|localhost|0\.0\.0\.0)/;
 
 export async function checkBot(ip: string, userAgent: string, path: string): Promise<BotCheckResult> {
+  // Strip IPv4-mapped IPv6 prefix (e.g., ::ffff:127.0.0.1 → 127.0.0.1)
+  const cleanIp = ip.startsWith("::ffff:") ? ip.slice(7) : ip;
+
   // Skip private/local IPs
-  if (!ip || ip === "unknown" || PRIVATE_IP_REGEX.test(ip)) {
+  if (!cleanIp || cleanIp === "unknown" || PRIVATE_IP_REGEX.test(cleanIp)) {
     return { blocked: false, reason: null, provider: null };
   }
 
@@ -33,13 +36,13 @@ export async function checkBot(ip: string, userAgent: string, path: string): Pro
   }
 
   // Check admin IP blocklist first (stored in Redis set)
-  const isManuallyBlocked = await isIpBlocked(ip);
+  const isManuallyBlocked = await isIpBlocked(cleanIp);
   if (isManuallyBlocked) {
     return { blocked: true, reason: "admin_blocklist", provider: "manual" };
   }
 
   // Check Redis cache
-  const cached = await getCachedIpResult(ip);
+  const cached = await getCachedIpResult(cleanIp);
   if (cached) {
     return { ...cached, provider: cached.provider ? `${cached.provider}:cached` : "cached" };
   }
@@ -53,7 +56,7 @@ export async function checkBot(ip: string, userAgent: string, path: string): Pro
         reason: `suspicious_ua:${uaResult.reason}`,
         provider: "ua_analysis",
       };
-      await setCachedIpResult(ip, result, config.cacheTtlSeconds);
+      await setCachedIpResult(cleanIp, result, config.cacheTtlSeconds);
       return result;
     }
   }
@@ -61,7 +64,7 @@ export async function checkBot(ip: string, userAgent: string, path: string): Pro
   // IPHub API check
   if (config.iphubEnabled && config.iphubApiKey) {
     try {
-      const iphubResult = await checkIpHub(ip, config.iphubApiKey);
+      const iphubResult = await checkIpHub(cleanIp, config.iphubApiKey);
       const decision = evaluateIpReputation(
         iphubResult.block,
         iphubResult.isp,
@@ -82,7 +85,7 @@ export async function checkBot(ip: string, userAgent: string, path: string): Pro
         os: detectOS(userAgent),
       };
 
-      await setCachedIpResult(ip, {
+      await setCachedIpResult(cleanIp, {
         blocked: result.blocked,
         reason: result.reason,
         provider: "iphub",
@@ -97,7 +100,7 @@ export async function checkBot(ip: string, userAgent: string, path: string): Pro
   // Secondary API check
   if (config.secondaryEnabled && config.secondaryApiKey && config.secondaryApiUrl) {
     try {
-      const secResult = await checkSecondaryApi(ip, config.secondaryApiUrl, config.secondaryApiKey);
+      const secResult = await checkSecondaryApi(cleanIp, config.secondaryApiUrl, config.secondaryApiKey);
       const decision = evaluateIpReputation(
         secResult.block,
         secResult.isp,
@@ -118,7 +121,7 @@ export async function checkBot(ip: string, userAgent: string, path: string): Pro
         os: detectOS(userAgent),
       };
 
-      await setCachedIpResult(ip, {
+      await setCachedIpResult(cleanIp, {
         blocked: result.blocked,
         reason: result.reason,
         provider: "secondary",
@@ -215,14 +218,14 @@ export async function getBlocklist(): Promise<string[]> {
 }
 
 export async function syncBlocklistFromDb(): Promise<void> {
-  // Called on startup or when admin updates blocklist
-  // Loads all BlockedIp records from DB into Redis set
   const { prisma } = await import("../prisma");
   const blocked = await prisma.blockedIp.findMany({ select: { ip: true } });
-  if (blocked.length === 0) return;
 
   try {
+    // Always clear first — handles the case where all IPs were removed from DB
     await redis.del(BLOCKLIST_KEY);
-    await redis.sadd(BLOCKLIST_KEY, ...blocked.map((b) => b.ip));
+    if (blocked.length > 0) {
+      await redis.sadd(BLOCKLIST_KEY, ...blocked.map((b) => b.ip));
+    }
   } catch { /* non-critical */ }
 }

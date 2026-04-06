@@ -883,8 +883,6 @@ const en = {
   botDetectionDescription: "Configure bot and VPN detection for invitation pages",
   botDetectionEnabled: "Bot Detection Enabled",
   botDetectionMasterToggle: "Master toggle for all bot detection features",
-  protectAllPages: "Protect All Pages",
-  protectAllPagesDesc: "Extend bot detection to all pages, not just invitations",
   failOpen: "Fail Open",
   failOpenDesc: "Allow traffic when IP reputation APIs are unavailable",
   cacheTtl: "Cache TTL (seconds)",
@@ -926,7 +924,6 @@ const en = {
   topBlockedIps: "Top Blocked IPs",
   topBlockedCountries: "Top Blocked Countries",
   blockReasons: "Block Reasons",
-  settingsSaved: "Settings saved",
   provider: "Provider",
 } as const;
 

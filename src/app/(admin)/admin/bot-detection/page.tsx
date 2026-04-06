@@ -111,7 +111,7 @@ export default function BotDetectionPage() {
     try {
       const [settingsRes, logsRes, statsRes, blocklistRes] = await Promise.all([
         fetch("/api/admin/bot-detection/settings"),
-        fetch(`/api/admin/bot-logs?page=${logsPage}&limit=20`),
+        fetch("/api/admin/bot-logs?page=1&limit=20"),
         fetch("/api/admin/bot-logs/stats"),
         fetch("/api/admin/bot-detection/blocklist"),
       ]);
@@ -137,11 +137,26 @@ export default function BotDetectionPage() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  const loadLogs = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/admin/bot-logs?page=${logsPage}&limit=20`);
+      if (res.ok) {
+        const data = await res.json();
+        setLogs(data.logs || []);
+        setLogsTotal(data.total || 0);
+      }
+    } catch { /* non-critical */ }
   }, [logsPage]);
 
   useEffect(() => {
     if (status === "authenticated") loadAll();
   }, [status, loadAll]);
+
+  useEffect(() => {
+    if (!loading && logsPage > 1) loadLogs();
+  }, [logsPage, loadLogs, loading]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -323,7 +338,7 @@ export default function BotDetectionPage() {
                   className="max-w-md"
                   value={getSetting("iphub.apiKey")}
                   onChange={(e) => updateSetting("iphub.apiKey", e.target.value)}
-                  placeholder="Enter IPHub API key"
+                  placeholder={t("iphubApiKey")}
                 />
               </div>
             </CardContent>
@@ -348,7 +363,7 @@ export default function BotDetectionPage() {
                   className="max-w-md"
                   value={getSetting("secondary.apiUrl")}
                   onChange={(e) => updateSetting("secondary.apiUrl", e.target.value)}
-                  placeholder="https://api.example.com/check/{ip}?key={key}"
+                  placeholder={t("secondaryApiUrl")}
                 />
               </div>
               <div className="space-y-2">
@@ -565,6 +580,9 @@ export default function BotDetectionPage() {
 
         {/* ─── STATS TAB ─── */}
         <TabsContent value="stats" className="space-y-4">
+          {!stats && (
+            <p className="py-12 text-center text-muted-foreground">{t("botLogsEmpty")}</p>
+          )}
           {stats && (
             <>
               <div className="grid gap-4 md:grid-cols-3">

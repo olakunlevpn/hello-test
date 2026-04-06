@@ -8,7 +8,11 @@ import { getBotDetectionConfig } from "@/lib/bot-detection/config";
 export async function POST(request: NextRequest) {
   try { await requireAdmin(); } catch { return NextResponse.json({ error: "Forbidden" }, { status: 403 }); }
 
-  const { ip, provider, ua } = await request.json();
+  let body;
+  try { body = await request.json(); } catch {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
+  const { ip, provider, ua } = body;
   if (!ip) return NextResponse.json({ error: "IP is required" }, { status: 400 });
 
   const config = await getBotDetectionConfig();

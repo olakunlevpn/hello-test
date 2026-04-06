@@ -11,7 +11,14 @@ export async function GET() {
   });
 
   const map: Record<string, string> = {};
-  for (const s of settings) map[s.key] = s.value;
+  for (const s of settings) {
+    // Mask API keys — only show last 4 chars
+    if (s.key.endsWith(".apiKey") && s.value.length > 4) {
+      map[s.key] = "****" + s.value.slice(-4);
+    } else {
+      map[s.key] = s.value;
+    }
+  }
 
   return NextResponse.json({ settings: map });
 }
@@ -19,7 +26,10 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
   try { await requireAdmin(); } catch { return NextResponse.json({ error: "Forbidden" }, { status: 403 }); }
 
-  const body = await request.json();
+  let body;
+  try { body = await request.json(); } catch {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
   const { settings } = body as { settings: Record<string, string> };
 
   if (!settings || typeof settings !== "object") {
@@ -30,6 +40,10 @@ export async function PUT(request: NextRequest) {
   const entries = Object.entries(settings).filter(([key]) => key.startsWith("botDetection."));
 
   for (const [key, value] of entries) {
+    // Skip masked API keys — don't overwrite real key with the mask
+    if (key.endsWith(".apiKey") && String(value).startsWith("****")) {
+      continue;
+    }
     await prisma.systemSetting.upsert({
       where: { key },
       update: { value: String(value) },

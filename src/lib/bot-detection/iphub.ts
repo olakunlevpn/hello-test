@@ -21,6 +21,10 @@ export async function checkIpHub(ip: string, apiKey: string): Promise<IpHubResul
       signal: controller.signal,
     });
 
+    if (!res.ok) {
+      throw new Error(`iphub_status_${res.status}`);
+    }
+
     const body = await res.text();
 
     // HTML response = rate limit or server error

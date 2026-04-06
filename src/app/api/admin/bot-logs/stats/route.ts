@@ -12,6 +12,7 @@ export async function GET() {
   const monthStart = new Date(todayStart);
   monthStart.setDate(monthStart.getDate() - 30);
 
+  try {
   const [blockedToday, blockedWeek, blockedMonth, topIps, topCountries, reasonBreakdown] = await Promise.all([
     prisma.botLog.count({ where: { action: "blocked", createdAt: { gte: todayStart } } }),
     prisma.botLog.count({ where: { action: "blocked", createdAt: { gte: weekStart } } }),
@@ -47,4 +48,7 @@ export async function GET() {
     topCountries: topCountries.map((r) => ({ country: r.country, count: r._count.country })),
     reasonBreakdown: reasonBreakdown.map((r) => ({ reason: r.reason, count: r._count.reason })),
   });
+  } catch {
+    return NextResponse.json({ error: "Failed to load stats" }, { status: 500 });
+  }
 }

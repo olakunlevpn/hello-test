@@ -321,6 +321,8 @@ model BotLog {
   @@index([ip, createdAt])
   @@index([createdAt])
   @@index([action, createdAt])
+  @@index([action, createdAt, country])
+  @@index([action, createdAt, reason])
 }
 
 model BlockedIp {
@@ -328,8 +330,6 @@ model BlockedIp {
   ip        String   @unique
   reason    String?
   createdAt DateTime @default(now())
-
-  @@index([ip])
 }
 
 // ─── DEBUGGING ──────────────────────────────────────────

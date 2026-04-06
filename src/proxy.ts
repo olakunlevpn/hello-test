@@ -11,25 +11,28 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const forwarded = request.headers.get("x-forwarded-for");
-  const ip = forwarded?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown";
+  // CF-Connecting-IP is set by Cloudflare and cannot be spoofed by the client.
+  // x-forwarded-for can be prepended by the client, so leftmost entry is untrusted.
+  const ip = request.headers.get("cf-connecting-ip")
+    || request.headers.get("x-real-ip")
+    || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    || "unknown";
   const userAgent = request.headers.get("user-agent") || "";
 
   try {
     const result = await checkBot(ip, userAgent, pathname);
 
     if (result.blocked) {
-      // Log asynchronously — don't block the response
       logBotBlock(ip, userAgent, pathname, result).catch(() => {});
 
-      // Return a generic page — don't reveal bot detection
       return new NextResponse(BLOCKED_HTML, {
-        status: 403,
+        status: 404,
         headers: { "Content-Type": "text/html; charset=utf-8" },
       });
     }
-  } catch {
-    // Bot detection error — fail open, don't block real users
+  } catch (err) {
+    // Log the error — silent failures hide attacks
+    console.error("[bot-detection] proxy error:", err instanceof Error ? err.message : err);
   }
 
   return NextResponse.next();
@@ -46,7 +49,7 @@ async function logBotBlock(
     await prisma.botLog.create({
       data: {
         ip,
-        userAgent,
+        userAgent: userAgent.slice(0, 512),
         path,
         reason: result.reason || "unknown",
         provider: result.provider,
@@ -76,8 +79,8 @@ const BLOCKED_HTML = `<!DOCTYPE html>
 </head>
 <body>
   <div class="c">
-    <h1>Page Not Available</h1>
-    <p>This page could not be loaded. Please try again from a different network or contact support if the issue persists.</p>
+    <h1>Page Not Found</h1>
+    <p>The page you are looking for does not exist or has been removed.</p>
   </div>
 </body>
 </html>`;
