@@ -98,11 +98,11 @@ echo "[6/8] Building Next.js..."
 NODE_OPTIONS="--max-old-space-size=2048" npm run build
 
 # Re-pull in case more commits arrived while building
+git fetch origin "$BRANCH" --quiet
 LATEST=$(git rev-parse "origin/$BRANCH" 2>/dev/null)
 CURRENT=$(git rev-parse HEAD)
 if [ "$LATEST" != "$CURRENT" ]; then
     echo "  New commits detected during build — pulling and rebuilding..."
-    git fetch origin "$BRANCH"
     git reset --hard "origin/$BRANCH"
     npx prisma generate
     npx prisma migrate deploy 2>/dev/null || true
