@@ -964,7 +964,6 @@ const en = {
   viewerPasswordPlaceholder: "Enter the shared link password",
   unlock: "Unlock",
   wrongPassword: "Wrong password",
-  sharedEmailView: "Shared Email View",
   selectAnEmail: "Select an email to read",
   emails: "emails",
 } as const;

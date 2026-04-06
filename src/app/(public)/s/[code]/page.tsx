@@ -69,7 +69,11 @@ export default function SharedLinkPage() {
     fetchShared("folders")
       .then((data) => {
         const list = data.folders?.value || data.folders || data.value || [];
-        setFolders(Array.isArray(list) ? list : []);
+        const folderArray = Array.isArray(list) ? list : [];
+        setFolders(folderArray);
+        // Resolve inbox GUID so the sidebar highlights correctly
+        const inbox = folderArray.find((f: MailFolder) => f.displayName?.toLowerCase() === "inbox");
+        if (inbox) setSelectedFolderId(inbox.id);
       })
       .catch(() => {});
   }, [authenticated, sessionToken, fetchShared]);
