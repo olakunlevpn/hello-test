@@ -276,7 +276,7 @@ export default function ViewerLinksPage() {
             </div>
             <div className="space-y-2">
               <Label>{t("linkExpiry")}</Label>
-              <Select value={expiryHours} onValueChange={setExpiryHours}>
+              <Select value={expiryHours} onValueChange={(v) => setExpiryHours(v ?? "0")}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
