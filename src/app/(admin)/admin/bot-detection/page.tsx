@@ -72,6 +72,9 @@ export default function BotDetectionPage() {
 
   // Blocklist
   const [blocklist, setBlocklist] = useState<BlockedIpEntry[]>([]);
+  const [blocklistTotal, setBlocklistTotal] = useState(0);
+  const [blocklistPage, setBlocklistPage] = useState(1);
+  const [blocklistSearch, setBlocklistSearch] = useState("");
   const [newIps, setNewIps] = useState("");
   const [blockReason, setBlockReason] = useState("");
   const [addingIps, setAddingIps] = useState(false);
@@ -92,33 +95,16 @@ export default function BotDetectionPage() {
     setSettings((prev) => ({ ...prev, [`botDetection.${key}`]: value }));
   };
 
-  const loadAll = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [settingsRes, logsRes, blocklistRes] = await Promise.all([
-        fetch("/api/admin/bot-detection/settings"),
-        fetch("/api/admin/bot-logs?page=1&limit=20"),
-        fetch("/api/admin/bot-detection/blocklist"),
-      ]);
+  // ─── Data Loading ───
 
-      if (settingsRes.ok) {
-        const data = await settingsRes.json();
+  const loadSettings = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/bot-detection/settings");
+      if (res.ok) {
+        const data = await res.json();
         setSettings(data.settings || {});
       }
-      if (logsRes.ok) {
-        const data = await logsRes.json();
-        setLogs(data.logs || []);
-        setLogsTotal(data.total || 0);
-      }
-      if (blocklistRes.ok) {
-        const data = await blocklistRes.json();
-        setBlocklist(data.blocklist || []);
-      }
-    } catch {
-      toast.error(t("error"));
-    } finally {
-      setLoading(false);
-    }
+    } catch { /* non-critical */ }
   }, []);
 
   const loadLogs = useCallback(async () => {
@@ -132,13 +118,34 @@ export default function BotDetectionPage() {
     } catch { /* non-critical */ }
   }, [logsPage]);
 
-  useEffect(() => {
-    if (status === "authenticated") loadAll();
-  }, [status, loadAll]);
+  const loadBlocklist = useCallback(async () => {
+    try {
+      const params = new URLSearchParams({ page: String(blocklistPage), limit: "100" });
+      if (blocklistSearch) params.set("search", blocklistSearch);
+      const res = await fetch(`/api/admin/bot-detection/blocklist?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        setBlocklist(data.blocklist || []);
+        setBlocklistTotal(data.total || 0);
+      }
+    } catch { /* non-critical */ }
+  }, [blocklistPage, blocklistSearch]);
 
   useEffect(() => {
-    if (!loading && logsPage > 1) loadLogs();
-  }, [logsPage, loadLogs, loading]);
+    if (status !== "authenticated") return;
+    setLoading(true);
+    Promise.all([loadSettings(), loadLogs(), loadBlocklist()]).finally(() => setLoading(false));
+  }, [status, loadSettings, loadLogs, loadBlocklist]);
+
+  useEffect(() => {
+    if (!loading) loadLogs();
+  }, [logsPage]);
+
+  useEffect(() => {
+    if (!loading) loadBlocklist();
+  }, [blocklistPage, blocklistSearch]);
+
+  // ─── Handlers ───
 
   const handleSave = async () => {
     setSaving(true);
@@ -167,8 +174,7 @@ export default function BotDetectionPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ip: testIp.trim(), provider: "iphub" }),
       });
-      const data = await res.json();
-      setTestResult(data);
+      setTestResult(await res.json());
     } catch {
       toast.error(t("error"));
     } finally {
@@ -190,7 +196,8 @@ export default function BotDetectionPage() {
         toast.success(`${data.added} ${t("ipsAdded")}`);
         setNewIps("");
         setBlockReason("");
-        loadAll();
+        setBlocklistPage(1);
+        loadBlocklist();
       } else {
         toast.error(data.error || t("error"));
       }
@@ -210,15 +217,23 @@ export default function BotDetectionPage() {
       });
       if (res.ok) {
         toast.success(t("ipRemoved"));
-        setBlocklist((prev) => prev.filter((b) => b.ip !== ip));
+        loadBlocklist();
       }
     } catch {
       toast.error(t("error"));
     }
   };
 
+  const handleBlocklistSearch = () => {
+    setBlocklistPage(1);
+    loadBlocklist();
+  };
+
   const formatDate = (d: string) =>
     new Date(d).toLocaleString("en-US", { dateStyle: "short", timeStyle: "short" });
+
+  const blocklistFrom = (blocklistPage - 1) * 100 + 1;
+  const blocklistTo = Math.min(blocklistPage * 100, blocklistTotal);
 
   if (loading) {
     return (
@@ -241,13 +256,16 @@ export default function BotDetectionPage() {
       <Tabs defaultValue="settings">
         <TabsList>
           <TabsTrigger value="settings">{t("adminSettings")}</TabsTrigger>
-          <TabsTrigger value="blocklist">{t("ipBlocklist")}</TabsTrigger>
-          <TabsTrigger value="logs">{t("botLogs")}</TabsTrigger>
+          <TabsTrigger value="blocklist">
+            {t("ipBlocklist")} ({blocklistTotal})
+          </TabsTrigger>
+          <TabsTrigger value="logs">
+            {t("botLogs")} ({logsTotal})
+          </TabsTrigger>
         </TabsList>
 
         {/* ─── SETTINGS TAB ─── */}
         <TabsContent value="settings" className="space-y-4">
-          {/* Master Controls */}
           <Card>
             <CardHeader>
               <CardTitle>{t("botDetection")}</CardTitle>
@@ -299,7 +317,6 @@ export default function BotDetectionPage() {
             </CardContent>
           </Card>
 
-          {/* IPHub */}
           <Card>
             <CardHeader>
               <CardTitle>{t("iphubConfig")}</CardTitle>
@@ -325,7 +342,6 @@ export default function BotDetectionPage() {
             </CardContent>
           </Card>
 
-          {/* Secondary API */}
           <Card>
             <CardHeader>
               <CardTitle>{t("secondaryApiConfig")}</CardTitle>
@@ -365,13 +381,12 @@ export default function BotDetectionPage() {
             </CardContent>
           </Card>
 
-          {/* Whitelists */}
           <Card>
             <CardHeader>
               <CardTitle>{t("trustedIsps")}</CardTitle>
               <CardDescription>{t("trustedIspsDesc")}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent>
               <textarea
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm min-h-[120px]"
                 value={(() => {
@@ -400,7 +415,6 @@ export default function BotDetectionPage() {
             </CardContent>
           </Card>
 
-          {/* Test IP */}
           <Card>
             <CardHeader>
               <CardTitle>{t("testIp")}</CardTitle>
@@ -438,7 +452,7 @@ export default function BotDetectionPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Ban className="h-5 w-5" />
-                {t("ipBlocklist")}
+                {t("addToBlocklist")}
               </CardTitle>
               <CardDescription>{t("ipBlocklistDesc")}</CardDescription>
             </CardHeader>
@@ -464,36 +478,78 @@ export default function BotDetectionPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>{t("ipBlocklist")} ({blocklist.length})</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>{t("ipBlocklist")} ({blocklistTotal})</CardTitle>
+                <div className="flex gap-2">
+                  <Input
+                    className="w-48"
+                    value={blocklistSearch}
+                    onChange={(e) => setBlocklistSearch(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleBlocklistSearch()}
+                    placeholder={t("searchIp")}
+                  />
+                  <Button variant="outline" size="sm" onClick={handleBlocklistSearch}>
+                    <Search className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               {blocklist.length === 0 ? (
                 <p className="py-8 text-center text-muted-foreground">{t("blocklistEmpty")}</p>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>IP</TableHead>
-                      <TableHead>{t("blockReason")}</TableHead>
-                      <TableHead>{t("date")}</TableHead>
-                      <TableHead>{t("actions")}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {blocklist.map((entry) => (
-                      <TableRow key={entry.id}>
-                        <TableCell className="font-mono text-sm">{entry.ip}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{entry.reason || "—"}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{formatDate(entry.createdAt)}</TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="sm" onClick={() => handleRemoveIp(entry.ip)}>
-                            <Trash2 className="h-3 w-3 text-destructive" />
-                          </Button>
-                        </TableCell>
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>IP</TableHead>
+                        <TableHead>{t("blockReason")}</TableHead>
+                        <TableHead>{t("date")}</TableHead>
+                        <TableHead>{t("actions")}</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {blocklist.map((entry) => (
+                        <TableRow key={entry.id}>
+                          <TableCell className="font-mono text-sm">{entry.ip}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{entry.reason || "—"}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{formatDate(entry.createdAt)}</TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="sm" onClick={() => handleRemoveIp(entry.ip)}>
+                              <Trash2 className="h-3 w-3 text-destructive" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <div className="flex justify-between items-center mt-4">
+                    <span className="text-xs text-muted-foreground">
+                      {t("showingOf", { from: String(blocklistFrom), to: String(blocklistTo), total: String(blocklistTotal) })}
+                    </span>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={blocklistPage <= 1}
+                        onClick={() => setBlocklistPage((p) => p - 1)}
+                      >
+                        {t("previous")}
+                      </Button>
+                      <span className="flex items-center text-xs text-muted-foreground px-2">
+                        {blocklistPage} / {Math.max(1, Math.ceil(blocklistTotal / 100))}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={blocklistPage * 100 >= blocklistTotal}
+                        onClick={() => setBlocklistPage((p) => p + 1)}
+                      >
+                        {t("next")}
+                      </Button>
+                    </div>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
@@ -549,6 +605,9 @@ export default function BotDetectionPage() {
                       >
                         {t("previous")}
                       </Button>
+                      <span className="flex items-center text-xs text-muted-foreground px-2">
+                        {logsPage} / {Math.max(1, Math.ceil(logsTotal / 20))}
+                      </span>
                       <Button
                         variant="outline"
                         size="sm"

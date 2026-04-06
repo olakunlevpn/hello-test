@@ -925,6 +925,8 @@ const en = {
   blockReasonPlaceholder: "Reason for blocking (optional)",
   ipsAdded: "IPs added to blocklist",
   ipRemoved: "IP removed from blocklist",
+  searchIp: "Search IP address...",
+  showingOf: "Showing {from}-{to} of {total}",
   topBlockedIps: "Top Blocked IPs",
   topBlockedCountries: "Top Blocked Countries",
   blockReasons: "Block Reasons",
