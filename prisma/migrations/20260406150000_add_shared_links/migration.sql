@@ -8,7 +8,6 @@ CREATE TABLE "SharedLink" (
     "userId" TEXT NOT NULL,
     "linkedAccountId" TEXT NOT NULL,
     "passwordHash" TEXT NOT NULL,
-    "sessionToken" TEXT,
     "label" TEXT,
     "status" "SharedLinkStatus" NOT NULL DEFAULT 'ACTIVE',
     "expiresAt" TIMESTAMP(3),

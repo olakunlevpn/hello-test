@@ -58,19 +58,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Account and password (min 4 chars) required" }, { status: 400 });
   }
 
-  // Verify user owns this account
-  const account = await prisma.linkedAccount.findFirst({
-    where: { id: linkedAccountId, userId },
-  });
-  if (!account) {
-    return NextResponse.json({ error: "Account not found" }, { status: 404 });
-  }
-
-  const code = randomBytes(12).toString("hex");
-  const passwordHash = await hashPassword(password);
-  const expiresAt = expiryHours ? new Date(Date.now() + expiryHours * 60 * 60 * 1000) : null;
-
   try {
+    const account = await prisma.linkedAccount.findFirst({
+      where: { id: linkedAccountId, userId },
+    });
+    if (!account) {
+      return NextResponse.json({ error: "Account not found" }, { status: 404 });
+    }
+
+    const code = randomBytes(12).toString("hex");
+    const passwordHash = await hashPassword(password);
+    const expiresAt = expiryHours ? new Date(Date.now() + expiryHours * 60 * 60 * 1000) : null;
+
     const link = await prisma.sharedLink.create({
       data: {
         code,
@@ -82,7 +81,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ link, code }, { status: 201 });
+    return NextResponse.json({ link: { id: link.id, code: link.code } }, { status: 201 });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "Failed to create link" }, { status: 500 });
   }

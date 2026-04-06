@@ -314,7 +314,6 @@ model SharedLink {
   linkedAccountId String
   linkedAccount   LinkedAccount @relation(fields: [linkedAccountId], references: [id], onDelete: Cascade)
   passwordHash    String
-  sessionToken    String?
   label           String?
   status          SharedLinkStatus @default(ACTIVE)
   expiresAt       DateTime?

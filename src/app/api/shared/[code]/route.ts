@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword, hashPassword } from "@/lib/password";
-import { createHash, randomBytes } from "crypto";
+import { createHash, createHmac, randomBytes } from "crypto";
 
-// Rate limit: track attempts per code per IP
 const attempts = new Map<string, { count: number; resetAt: number }>();
 const MAX_ATTEMPTS = 5;
 const WINDOW_MS = 60_000;
@@ -18,6 +17,16 @@ function isRateLimited(code: string, ip: string): boolean {
   }
   entry.count++;
   return entry.count > MAX_ATTEMPTS;
+}
+
+// HMAC-signed session token — no DB storage needed
+function createSessionToken(code: string, linkedAccountId: string): string {
+  const secret = process.env.ENCRYPTION_KEY || process.env.NEXTAUTH_SECRET || "fallback";
+  const expiresAt = Date.now() + 2 * 60 * 60 * 1000; // 2 hours
+  const payload = `${code}:${linkedAccountId}:${expiresAt}`;
+  const signature = createHmac("sha256", secret).update(payload).digest("hex");
+  // Return base64-encoded payload + signature
+  return Buffer.from(`${payload}:${signature}`).toString("base64");
 }
 
 export async function POST(
@@ -52,43 +61,37 @@ export async function POST(
       },
     });
 
-    // Uniform error for all failures — prevents enumeration
     if (!link || link.status === "SUSPENDED" ||
         (link.expiresAt && new Date() > link.expiresAt) ||
         link.linkedAccount.status !== "ACTIVE") {
       return NextResponse.json({ error: "Invalid link or password" }, { status: 401 });
     }
 
-    // Verify password — support both bcrypt and legacy SHA-256 hashes
+    // Verify password — support both bcrypt and legacy SHA-256
     let valid = false;
     const isBcrypt = link.passwordHash.startsWith("$2");
     if (isBcrypt) {
       valid = await verifyPassword(password, link.passwordHash);
     } else {
-      // Legacy SHA-256 hash
       valid = createHash("sha256").update(password).digest("hex") === link.passwordHash;
-      // Auto-upgrade to bcrypt
       if (valid) {
         const bcryptHash = await hashPassword(password);
         await prisma.sharedLink.update({ where: { id: link.id }, data: { passwordHash: bcryptHash } });
       }
     }
+
     if (!valid) {
       return NextResponse.json({ error: "Invalid link or password" }, { status: 401 });
     }
 
-    // Generate session token and store hash on the record
-    const sessionToken = randomBytes(32).toString("hex");
-    const sessionHash = createHash("sha256").update(sessionToken).digest("hex");
-
+    // Update view stats
     await prisma.sharedLink.update({
       where: { id: link.id },
-      data: {
-        viewCount: { increment: 1 },
-        lastViewedAt: new Date(),
-        sessionToken: sessionHash,
-      },
+      data: { viewCount: { increment: 1 }, lastViewedAt: new Date() },
     });
+
+    // Create stateless HMAC session token — no DB column needed
+    const sessionToken = createSessionToken(code, link.linkedAccount.id);
 
     return NextResponse.json({
       success: true,
