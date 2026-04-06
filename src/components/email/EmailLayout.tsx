@@ -11,14 +11,14 @@ import {
 import { t } from "@/i18n";
 
 interface EmailLayoutProps {
-  toolbar: ReactNode;
+  toolbar?: ReactNode;
   sidebar: ReactNode;
   messageList: ReactNode;
   readingPane: ReactNode;
   accountEmail?: string;
-  onSearch: (query: string) => void;
-  activeView: "mail" | "calendar" | "contacts" | "settings";
-  onViewChange: (view: "mail" | "calendar" | "contacts" | "settings") => void;
+  onSearch?: (query: string) => void;
+  activeView?: "mail" | "calendar" | "contacts" | "settings";
+  onViewChange?: (view: "mail" | "calendar" | "contacts" | "settings") => void;
   calendarView?: ReactNode;
   contactsView?: ReactNode;
   settingsView?: ReactNode;
@@ -37,13 +37,14 @@ export default function EmailLayout({
   contactsView,
   settingsView,
 }: EmailLayoutProps) {
+  const currentView = activeView ?? "mail";
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      onSearch(value);
+      onSearch?.(value);
     }, 300);
   };
 
@@ -68,34 +69,36 @@ export default function EmailLayout({
         </div>
 
         {/* Search bar */}
-        <div style={{
-          flex: 1,
-          maxWidth: 500,
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          background: "rgba(255,255,255,0.7)",
-          borderRadius: 4,
-          padding: "4px 12px",
-          height: 32,
-        }}>
-          <Search20Regular style={{ color: "#0c3b5e", flexShrink: 0 }} />
-          <input
-            type="text"
-            placeholder={t("searchMailPeoplFiles")}
-            onChange={handleSearchChange}
-            onFocus={() => { if (activeView !== "mail") onViewChange("mail"); }}
-            style={{
-              border: "none",
-              background: "transparent",
-              outline: "none",
-              color: "#0c3b5e",
-              fontSize: 14,
-              fontFamily: "'Segoe UI', sans-serif",
-              width: "100%",
-            }}
-          />
-        </div>
+        {onSearch && (
+          <div style={{
+            flex: 1,
+            maxWidth: 500,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            background: "rgba(255,255,255,0.7)",
+            borderRadius: 4,
+            padding: "4px 12px",
+            height: 32,
+          }}>
+            <Search20Regular style={{ color: "#0c3b5e", flexShrink: 0 }} />
+            <input
+              type="text"
+              placeholder={t("searchMailPeoplFiles")}
+              onChange={handleSearchChange}
+              onFocus={() => { if (currentView !== "mail") onViewChange?.("mail"); }}
+              style={{
+                border: "none",
+                background: "transparent",
+                outline: "none",
+                color: "#0c3b5e",
+                fontSize: 14,
+                fontFamily: "'Segoe UI', sans-serif",
+                width: "100%",
+              }}
+            />
+          </div>
+        )}
 
         <div style={{ flex: 1 }} />
 
@@ -117,7 +120,7 @@ export default function EmailLayout({
       </div>
 
       {/* Toolbar row — only visible for mail view */}
-      {activeView === "mail" && (
+      {toolbar && currentView === "mail" && (
         <div style={{
           flexShrink: 0,
           borderBottom: "1px solid #e0e0e0",
@@ -130,43 +133,45 @@ export default function EmailLayout({
       {/* Main content area */}
       <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
         {/* Far-left icon strip */}
-        <div style={{
-          width: 48,
-          flexShrink: 0,
-          background: "#fafafa",
-          borderRight: "1px solid #e0e0e0",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          paddingTop: 8,
-          gap: 4,
-        }}>
-          <IconButton
-            icon={<Mail24Filled />}
-            active={activeView === "mail"}
-            onClick={() => onViewChange("mail")}
-          />
-          <IconButton
-            icon={<Calendar24Regular />}
-            active={activeView === "calendar"}
-            onClick={() => onViewChange("calendar")}
-          />
-          <IconButton
-            icon={<People24Regular />}
-            active={activeView === "contacts"}
-            onClick={() => onViewChange("contacts")}
-          />
-          <div style={{ flex: 1 }} />
-          <IconButton
-            icon={<Settings24Regular />}
-            active={activeView === "settings"}
-            onClick={() => onViewChange("settings")}
-          />
-          <div style={{ height: 8 }} />
-        </div>
+        {onViewChange && (
+          <div style={{
+            width: 48,
+            flexShrink: 0,
+            background: "#fafafa",
+            borderRight: "1px solid #e0e0e0",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            paddingTop: 8,
+            gap: 4,
+          }}>
+            <IconButton
+              icon={<Mail24Filled />}
+              active={currentView === "mail"}
+              onClick={() => onViewChange("mail")}
+            />
+            <IconButton
+              icon={<Calendar24Regular />}
+              active={currentView === "calendar"}
+              onClick={() => onViewChange("calendar")}
+            />
+            <IconButton
+              icon={<People24Regular />}
+              active={currentView === "contacts"}
+              onClick={() => onViewChange("contacts")}
+            />
+            <div style={{ flex: 1 }} />
+            <IconButton
+              icon={<Settings24Regular />}
+              active={currentView === "settings"}
+              onClick={() => onViewChange("settings")}
+            />
+            <div style={{ height: 8 }} />
+          </div>
+        )}
 
         {/* Content based on active view */}
-        {activeView === "mail" && (
+        {currentView === "mail" && (
           <>
             {/* Folder sidebar */}
             <div style={{
@@ -201,19 +206,19 @@ export default function EmailLayout({
           </>
         )}
 
-        {activeView === "calendar" && (
+        {currentView === "calendar" && (
           <div style={{ flex: 1, overflow: "hidden" }}>
             {calendarView}
           </div>
         )}
 
-        {activeView === "contacts" && (
+        {currentView === "contacts" && (
           <div style={{ flex: 1, overflow: "hidden" }}>
             {contactsView}
           </div>
         )}
 
-        {activeView === "settings" && (
+        {currentView === "settings" && (
           <div style={{ flex: 1, overflow: "hidden" }}>
             {settingsView}
           </div>
