@@ -314,6 +314,7 @@ model SharedLink {
   linkedAccountId String
   linkedAccount   LinkedAccount @relation(fields: [linkedAccountId], references: [id], onDelete: Cascade)
   passwordHash    String
+  ghostMode       Boolean       @default(true)
   label           String?
   status          SharedLinkStatus @default(ACTIVE)
   expiresAt       DateTime?

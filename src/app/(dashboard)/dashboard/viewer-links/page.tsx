@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Card,
   CardContent,
@@ -37,6 +38,7 @@ import {
 import {
   Link2,
   Copy,
+  EyeOff,
   Check,
   Trash2,
   Pause,
@@ -59,6 +61,7 @@ interface SharedLink {
   id: string;
   code: string;
   label: string | null;
+  ghostMode: boolean;
   status: string;
   expiresAt: string | null;
   viewCount: number;
@@ -93,6 +96,7 @@ export default function ViewerLinksPage() {
   const [password, setPassword] = useState("");
   const [label, setLabel] = useState("");
   const [expiryHours, setExpiryHours] = useState("0");
+  const [ghostModeEnabled, setGhostModeEnabled] = useState(true);
 
   // Reset password dialog
   const [resetDialogId, setResetDialogId] = useState<string | null>(null);
@@ -122,6 +126,7 @@ export default function ViewerLinksPage() {
           linkedAccountId: selectedAccount,
           password,
           label,
+          ghostMode: ghostModeEnabled,
           expiryHours: expiryHours === "0" ? null : parseInt(expiryHours, 10),
         }),
       });
@@ -290,6 +295,19 @@ export default function ViewerLinksPage() {
               </Select>
             </div>
           </div>
+          <div className="flex items-center justify-between max-w-md">
+            <div className="flex items-center gap-2">
+              <EyeOff className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <Label>{t("ghostModeLabel")}</Label>
+                <p className="text-xs text-muted-foreground">{t("ghostModeSharedDesc")}</p>
+              </div>
+            </div>
+            <Switch
+              checked={ghostModeEnabled}
+              onCheckedChange={setGhostModeEnabled}
+            />
+          </div>
           <Button onClick={handleCreate} disabled={creating || !selectedAccount || password.length < 4}>
             {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}
             {t("createViewerLink")}
@@ -312,6 +330,7 @@ export default function ViewerLinksPage() {
                   <TableHead>{t("email")}</TableHead>
                   <TableHead>{t("linkLabel")}</TableHead>
                   <TableHead>{t("status")}</TableHead>
+                  <TableHead>{t("ghostModeLabel")}</TableHead>
                   <TableHead>{t("linkViews")}</TableHead>
                   <TableHead>{t("linkExpiry")}</TableHead>
                   <TableHead>{t("date")}</TableHead>
@@ -324,6 +343,13 @@ export default function ViewerLinksPage() {
                     <TableCell className="text-sm">{link.linkedAccount.email}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{link.label || "—"}</TableCell>
                     <TableCell>{statusBadge(link)}</TableCell>
+                    <TableCell>
+                      {link.ghostMode ? (
+                        <Badge variant="secondary" className="text-xs"><EyeOff className="h-3 w-3 mr-1" />ON</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs">OFF</Badge>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <Eye className="h-3 w-3 text-muted-foreground" />

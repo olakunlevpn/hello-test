@@ -1,0 +1,1 @@
+ALTER TABLE "SharedLink" ADD COLUMN "ghostMode" BOOLEAN NOT NULL DEFAULT true;

@@ -21,6 +21,7 @@ export default function SharedLinkPage() {
   const [error, setError] = useState("");
   const [authenticated, setAuthenticated] = useState(false);
   const [sessionToken, setSessionToken] = useState("");
+  const [ghostMode, setGhostMode] = useState(true);
   const [accountInfo, setAccountInfo] = useState<{ email: string; displayName: string } | null>(null);
 
   const [folders, setFolders] = useState<MailFolder[]>([]);
@@ -52,6 +53,7 @@ export default function SharedLinkPage() {
       const data = await res.json();
       if (res.ok && data.success) {
         setSessionToken(data.sessionToken);
+        setGhostMode(data.ghostMode !== false);
         setAccountInfo({ email: data.email, displayName: data.displayName });
         setAuthenticated(true);
       } else {
@@ -90,6 +92,29 @@ export default function SharedLinkPage() {
       .catch(() => setMessages([]))
       .finally(() => setLoadingMessages(false));
   }, [authenticated, sessionToken, selectedFolderId, fetchShared]);
+
+  const handleMessageSelect = useCallback((msg: EmailMessage) => {
+    setSelectedMessage(msg);
+    // Mark as read if ghost mode is OFF and message is unread
+    if (!ghostMode && !msg.isRead) {
+      fetch(`/api/shared/${code}/mark-read`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionToken}`,
+        },
+        body: JSON.stringify({ messageId: msg.id }),
+      })
+        .then((res) => {
+          if (res.ok) {
+            setMessages((prev) =>
+              prev.map((m) => (m.id === msg.id ? { ...m, isRead: true } : m))
+            );
+          }
+        })
+        .catch(() => {});
+    }
+  }, [code, sessionToken, ghostMode]);
 
   if (!authenticated) {
     return (
@@ -140,7 +165,7 @@ export default function SharedLinkPage() {
             selectedMessageId={selectedMessage?.id || null}
             loading={loadingMessages}
             hasMore={false}
-            onMessageSelect={setSelectedMessage}
+            onMessageSelect={handleMessageSelect}
             onSearch={() => {}}
             onLoadMore={() => {}}
           />

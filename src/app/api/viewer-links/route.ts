@@ -21,6 +21,7 @@ export async function GET() {
         id: true,
         code: true,
         label: true,
+        ghostMode: true,
         status: true,
         expiresAt: true,
         viewCount: true,
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const { linkedAccountId, password, label, expiryHours } = body;
+  const { linkedAccountId, password, label, expiryHours, ghostMode } = body;
 
   if (!linkedAccountId || !password || password.length < 4) {
     return NextResponse.json({ error: "Account and password (min 4 chars) required" }, { status: 400 });
@@ -76,6 +77,7 @@ export async function POST(request: NextRequest) {
         userId,
         linkedAccountId,
         passwordHash,
+        ghostMode: ghostMode !== false, // default true
         label: label || null,
         expiresAt,
       },

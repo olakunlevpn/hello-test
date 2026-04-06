@@ -97,6 +97,7 @@ export async function POST(
       success: true,
       email: link.linkedAccount.email,
       displayName: link.linkedAccount.displayName,
+      ghostMode: link.ghostMode,
       sessionToken,
     });
   } catch (err) {

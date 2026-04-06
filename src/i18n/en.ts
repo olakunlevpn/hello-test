@@ -965,6 +965,8 @@ const en = {
   unlock: "Unlock",
   wrongPassword: "Wrong password",
   selectAnEmail: "Select an email to read",
+  ghostModeLabel: "Ghost Mode",
+  ghostModeSharedDesc: "When enabled, opening emails will NOT mark them as read in the account",
   emails: "emails",
 } as const;
 
