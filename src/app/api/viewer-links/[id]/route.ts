@@ -48,14 +48,16 @@ export async function PATCH(
   }
 
   try {
-    await prisma.sharedLink.update({ where: { id }, data });
-    // Clear sessionToken on password reset so viewer must re-authenticate
+    // Merge sessionToken clear into the same update if resetting password
     if (data.passwordHash) {
-      await prisma.sharedLink.update({ where: { id }, data: { sessionToken: null } });
+      data.sessionToken = null;
     }
+    await prisma.sharedLink.update({ where: { id }, data });
     return NextResponse.json({ success: true });
-  } catch {
-    return NextResponse.json({ error: "Update failed" }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({
+      error: err instanceof Error ? err.message : "Update failed",
+    }, { status: 500 });
   }
 }
 

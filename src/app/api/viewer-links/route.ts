@@ -32,8 +32,8 @@ export async function GET() {
     });
 
     return NextResponse.json({ links });
-  } catch {
-    return NextResponse.json({ error: "Failed to load links" }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Failed to load links" }, { status: 500 });
   }
 }
 
@@ -84,6 +84,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ link, code }, { status: 201 });
   } catch {
-    return NextResponse.json({ error: "Failed to create link" }, { status: 500 });
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Failed to create link" }, { status: 500 });
   }
 }

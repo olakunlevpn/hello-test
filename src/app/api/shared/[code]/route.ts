@@ -96,7 +96,9 @@ export async function POST(
       displayName: link.linkedAccount.displayName,
       sessionToken,
     });
-  } catch {
-    return NextResponse.json({ error: "Authentication failed" }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json({
+      error: err instanceof Error ? err.message : "Authentication failed",
+    }, { status: 500 });
   }
 }
