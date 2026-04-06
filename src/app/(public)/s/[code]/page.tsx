@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Lock, Loader2, Mail, Inbox, RefreshCw } from "lucide-react";
 import { t } from "@/i18n";
-import DOMPurify from "dompurify";
 
 interface MailFolder {
   id: string;
@@ -27,6 +26,26 @@ interface EmailMessage {
   body?: { content: string; contentType: string };
 }
 
+// Sanitize HTML without DOMPurify (SSR-safe) — strip scripts and event handlers
+function safeSanitize(html: string): string {
+  if (typeof window === "undefined") return "";
+  // Lazy-load DOMPurify only on client
+  try {
+    const DOMPurify = require("dompurify");
+    return DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: [
+        "p", "br", "b", "i", "u", "strong", "em", "a", "img", "div", "span",
+        "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "table", "thead",
+        "tbody", "tr", "td", "th", "blockquote", "pre", "code", "hr",
+      ],
+      ALLOWED_ATTR: ["href", "src", "alt", "title", "class", "style", "target", "width", "height"],
+      ALLOW_DATA_ATTR: false,
+    });
+  } catch {
+    return html.replace(/<script[\s\S]*?<\/script>/gi, "").replace(/on\w+="[^"]*"/gi, "");
+  }
+}
+
 export default function SharedLinkPage() {
   const { code } = useParams<{ code: string }>();
   const [password, setPassword] = useState("");
@@ -36,7 +55,6 @@ export default function SharedLinkPage() {
   const [sessionToken, setSessionToken] = useState("");
   const [accountInfo, setAccountInfo] = useState<{ email: string; displayName: string } | null>(null);
 
-  // Email state
   const [folders, setFolders] = useState<MailFolder[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState("inbox");
   const [messages, setMessages] = useState<EmailMessage[]>([]);
@@ -78,21 +96,25 @@ export default function SharedLinkPage() {
     }
   };
 
-  // Load folders after auth
   useEffect(() => {
     if (!authenticated || !sessionToken) return;
     fetchShared("folders")
-      .then((data) => setFolders(data.folders || []))
+      .then((data) => {
+        const list = data.folders?.value || data.folders || data.value || [];
+        setFolders(Array.isArray(list) ? list : []);
+      })
       .catch(() => {});
   }, [authenticated, sessionToken, fetchShared]);
 
-  // Load messages when folder changes
   useEffect(() => {
     if (!authenticated || !sessionToken) return;
     setLoadingMessages(true);
     setSelectedMessage(null);
     fetchShared("mail", { folderId: selectedFolderId, top: "25" })
-      .then((data) => setMessages(data.value || []))
+      .then((data) => {
+        const list = data.value || data.messages || [];
+        setMessages(Array.isArray(list) ? list : []);
+      })
       .catch(() => setMessages([]))
       .finally(() => setLoadingMessages(false));
   }, [authenticated, sessionToken, selectedFolderId, fetchShared]);
@@ -100,7 +122,6 @@ export default function SharedLinkPage() {
   const formatDate = (d: string) =>
     new Date(d).toLocaleString("en-US", { dateStyle: "short", timeStyle: "short" });
 
-  // ─── Password Gate ───
   if (!authenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] p-4">
@@ -132,10 +153,8 @@ export default function SharedLinkPage() {
     );
   }
 
-  // ─── Email Viewer ───
   return (
     <div className="h-screen flex flex-col bg-background text-foreground">
-      {/* Header */}
       <div className="flex items-center gap-3 border-b border-border px-4 py-2 bg-card shrink-0">
         <Mail className="h-4 w-4 text-primary" />
         <span className="text-sm font-medium">{accountInfo?.displayName}</span>
@@ -144,7 +163,6 @@ export default function SharedLinkPage() {
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Folder Sidebar */}
         <div className="w-48 border-r border-border overflow-y-auto shrink-0 bg-card">
           <div className="p-2 space-y-0.5">
             {folders.map((folder) => (
@@ -164,7 +182,6 @@ export default function SharedLinkPage() {
           </div>
         </div>
 
-        {/* Message List */}
         <div className="w-80 border-r border-border overflow-y-auto shrink-0">
           <div className="flex items-center justify-between p-2 border-b border-border">
             <span className="text-xs text-muted-foreground">{messages.length} {t("emails")}</span>
@@ -201,7 +218,6 @@ export default function SharedLinkPage() {
           )}
         </div>
 
-        {/* Reading Pane */}
         <div className="flex-1 overflow-y-auto">
           {selectedMessage ? (
             <div className="p-6">
@@ -214,9 +230,7 @@ export default function SharedLinkPage() {
               <div
                 className="prose prose-invert max-w-none text-sm"
                 dangerouslySetInnerHTML={{
-                  __html: DOMPurify.sanitize(
-                    selectedMessage.body?.content || selectedMessage.bodyPreview || ""
-                  ),
+                  __html: safeSanitize(selectedMessage.body?.content || selectedMessage.bodyPreview || ""),
                 }}
               />
             </div>

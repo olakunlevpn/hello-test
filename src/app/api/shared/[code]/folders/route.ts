@@ -18,10 +18,11 @@ export async function GET(
     if (!linkedAccount) return NextResponse.json({ error: "Account not found" }, { status: 404 });
 
     const graph = new MicrosoftGraphService(linkedAccount);
-    const folders = await graph.getFolders();
+    const result = await graph.getFolders();
 
-    return NextResponse.json({ folders });
-  } catch {
-    return NextResponse.json({ error: "Failed to load folders" }, { status: 500 });
+    // getFolders returns { value: MailFolder[] } — return the array directly
+    return NextResponse.json({ folders: result.value || [] });
+  } catch (err) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Failed to load folders" }, { status: 500 });
   }
 }
