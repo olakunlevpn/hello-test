@@ -107,6 +107,58 @@ export async function GET() {
     .filter((u) => u._count.linkedAccounts > 0)
     .map((u) => ({ name: u.name || u.email.split("@")[0], accounts: u._count.linkedAccounts }));
 
+  // Bot detection stats — last 30 days
+  let botBlocksByDay: { date: string; blocked: number }[] = [];
+  let botBlocksTotal = 0;
+  let botBlocksToday = 0;
+  let botTopCountries: { country: string; count: number }[] = [];
+  let botReasonBreakdown: { reason: string; count: number }[] = [];
+
+  try {
+    const todayStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+
+    const botLogs = await prisma.botLog.findMany({
+      where: { action: "blocked", createdAt: { gte: thirtyDaysAgo } },
+      select: { createdAt: true, country: true, reason: true },
+    });
+
+    botBlocksTotal = botLogs.length;
+    botBlocksToday = botLogs.filter((b) => b.createdAt >= todayStart).length;
+
+    // Blocks per day
+    const botByDay: Record<string, number> = {};
+    for (let i = 0; i < 30; i++) {
+      const date = new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000);
+      botByDay[date.toISOString().split("T")[0]] = 0;
+    }
+    for (const b of botLogs) {
+      const day = b.createdAt.toISOString().split("T")[0];
+      if (botByDay[day] !== undefined) botByDay[day]++;
+    }
+    botBlocksByDay = Object.entries(botByDay).map(([date, count]) => ({ date, blocked: count }));
+
+    // Top countries
+    const countryMap: Record<string, number> = {};
+    for (const b of botLogs) {
+      if (b.country) countryMap[b.country] = (countryMap[b.country] || 0) + 1;
+    }
+    botTopCountries = Object.entries(countryMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([country, count]) => ({ country, count }));
+
+    // Reason breakdown
+    const reasonMap: Record<string, number> = {};
+    for (const b of botLogs) {
+      const short = b.reason.split(":")[0];
+      reasonMap[short] = (reasonMap[short] || 0) + 1;
+    }
+    botReasonBreakdown = Object.entries(reasonMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([reason, count]) => ({ reason, count }));
+  } catch { /* bot tables may not exist yet */ }
+
   return NextResponse.json({
     userGrowth,
     revenueTimeline,
@@ -115,5 +167,10 @@ export async function GET() {
     subscriptionPlans,
     webhookTimeline,
     topUsersByAccounts,
+    botBlocksByDay,
+    botBlocksTotal,
+    botBlocksToday,
+    botTopCountries,
+    botReasonBreakdown,
   });
 }

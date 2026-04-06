@@ -26,8 +26,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import {
   Shield,
-  ShieldAlert,
-  ShieldCheck,
   Trash2,
   Loader2,
   Search,
@@ -59,15 +57,6 @@ interface BlockedIpEntry {
   createdAt: string;
 }
 
-interface Stats {
-  blockedToday: number;
-  blockedWeek: number;
-  blockedMonth: number;
-  topIps: { ip: string; count: number }[];
-  topCountries: { country: string; count: number }[];
-  reasonBreakdown: { reason: string; count: number }[];
-}
-
 export default function BotDetectionPage() {
   const { status } = useSession();
   const [loading, setLoading] = useState(true);
@@ -80,9 +69,6 @@ export default function BotDetectionPage() {
   const [logs, setLogs] = useState<BotLogEntry[]>([]);
   const [logsTotal, setLogsTotal] = useState(0);
   const [logsPage, setLogsPage] = useState(1);
-
-  // Stats
-  const [stats, setStats] = useState<Stats | null>(null);
 
   // Blocklist
   const [blocklist, setBlocklist] = useState<BlockedIpEntry[]>([]);
@@ -109,10 +95,9 @@ export default function BotDetectionPage() {
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [settingsRes, logsRes, statsRes, blocklistRes] = await Promise.all([
+      const [settingsRes, logsRes, blocklistRes] = await Promise.all([
         fetch("/api/admin/bot-detection/settings"),
         fetch("/api/admin/bot-logs?page=1&limit=20"),
-        fetch("/api/admin/bot-logs/stats"),
         fetch("/api/admin/bot-detection/blocklist"),
       ]);
 
@@ -124,9 +109,6 @@ export default function BotDetectionPage() {
         const data = await logsRes.json();
         setLogs(data.logs || []);
         setLogsTotal(data.total || 0);
-      }
-      if (statsRes.ok) {
-        setStats(await statsRes.json());
       }
       if (blocklistRes.ok) {
         const data = await blocklistRes.json();
@@ -261,7 +243,6 @@ export default function BotDetectionPage() {
           <TabsTrigger value="settings">{t("adminSettings")}</TabsTrigger>
           <TabsTrigger value="blocklist">{t("ipBlocklist")}</TabsTrigger>
           <TabsTrigger value="logs">{t("botLogs")}</TabsTrigger>
-          <TabsTrigger value="stats">{t("overview")}</TabsTrigger>
         </TabsList>
 
         {/* ─── SETTINGS TAB ─── */}
@@ -578,113 +559,6 @@ export default function BotDetectionPage() {
           </Card>
         </TabsContent>
 
-        {/* ─── STATS TAB ─── */}
-        <TabsContent value="stats" className="space-y-4">
-          {!stats && (
-            <p className="py-12 text-center text-muted-foreground">{t("botLogsEmpty")}</p>
-          )}
-          {stats && (
-            <>
-              <div className="grid gap-4 md:grid-cols-3">
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center gap-3">
-                      <ShieldAlert className="h-8 w-8 text-red-500" />
-                      <div>
-                        <p className="text-2xl font-bold">{stats.blockedToday}</p>
-                        <p className="text-xs text-muted-foreground">{t("blockedToday")}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center gap-3">
-                      <ShieldAlert className="h-8 w-8 text-orange-500" />
-                      <div>
-                        <p className="text-2xl font-bold">{stats.blockedWeek}</p>
-                        <p className="text-xs text-muted-foreground">{t("blockedThisWeek")}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center gap-3">
-                      <ShieldCheck className="h-8 w-8 text-green-500" />
-                      <div>
-                        <p className="text-2xl font-bold">{stats.blockedMonth}</p>
-                        <p className="text-xs text-muted-foreground">{t("blockedThisMonth")}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">{t("topBlockedIps")}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {stats.topIps.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">—</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {stats.topIps.map((item) => (
-                          <div key={item.ip} className="flex justify-between items-center">
-                            <span className="font-mono text-xs">{item.ip}</span>
-                            <Badge variant="secondary">{item.count}</Badge>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">{t("topBlockedCountries")}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {stats.topCountries.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">—</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {stats.topCountries.map((item) => (
-                          <div key={item.country} className="flex justify-between items-center">
-                            <span className="text-sm">{item.country}</span>
-                            <Badge variant="secondary">{item.count}</Badge>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card className="md:col-span-2">
-                  <CardHeader>
-                    <CardTitle className="text-sm">{t("blockReasons")}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {stats.reasonBreakdown.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">—</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {stats.reasonBreakdown.map((item) => (
-                          <div key={item.reason} className="flex justify-between items-center">
-                            <Badge variant="outline" className="text-xs">{item.reason}</Badge>
-                            <span className="text-sm font-medium">{item.count}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </>
-          )}
-        </TabsContent>
       </Tabs>
     </div>
   );

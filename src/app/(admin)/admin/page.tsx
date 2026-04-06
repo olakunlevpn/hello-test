@@ -26,6 +26,8 @@ import {
   DollarSign,
   Webhook,
   Clock,
+  Shield,
+  Ban,
 } from "lucide-react";
 import { t } from "@/i18n";
 import { LoadingText } from "@/components/ui/loading-text";
@@ -83,6 +85,11 @@ interface AdminChartData {
   subscriptionPlans: { monthly: number; yearly: number };
   webhookTimeline: { date: string; processed: number; failed: number }[];
   topUsersByAccounts: { name: string; accounts: number }[];
+  botBlocksByDay: { date: string; blocked: number }[];
+  botBlocksTotal: number;
+  botBlocksToday: number;
+  botTopCountries: { country: string; count: number }[];
+  botReasonBreakdown: { reason: string; count: number }[];
 }
 
 const userGrowthConfig: ChartConfig = {
@@ -112,6 +119,18 @@ const webhookConfig: ChartConfig = {
 
 const topUsersConfig: ChartConfig = {
   accounts: { label: "Accounts", color: "#84cc16" },
+};
+
+const botBlocksConfig: ChartConfig = {
+  blocked: { label: "Bots Blocked", color: "#f97316" },
+};
+
+const botCountryConfig: ChartConfig = {
+  count: { label: "Blocked", color: "#ef4444" },
+};
+
+const botReasonConfig: ChartConfig = {
+  count: { label: "Count", color: "#f97316" },
 };
 
 function StatCard({
@@ -268,6 +287,24 @@ export default function AdminDashboardPage() {
           iconClass="text-yellow-500"
         />
       </div>
+
+      {/* Bot Detection Stats */}
+      {chartData && chartData.botBlocksTotal > 0 && (
+        <div className="grid grid-cols-2 gap-4">
+          <StatCard
+            icon={Shield}
+            label={t("blockedToday")}
+            value={chartData.botBlocksToday}
+            iconClass="text-orange-500"
+          />
+          <StatCard
+            icon={Ban}
+            label={t("blockedThisMonth")}
+            value={chartData.botBlocksTotal}
+            iconClass="text-red-500"
+          />
+        </div>
+      )}
 
       <Card>
         <CardHeader>
@@ -469,6 +506,80 @@ export default function AdminDashboardPage() {
                     />
                     <ChartTooltip content={<ChartTooltipContent />} />
                     <Bar dataKey="accounts" fill="#84cc16" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Bot Blocks Timeline */}
+          {chartData!.botBlocksByDay?.some((d) => d.blocked > 0) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>{t("botDetection")} — {t("blockedThisMonth")}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={botBlocksConfig}>
+                  <AreaChart data={chartData!.botBlocksByDay}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Area
+                      type="monotone"
+                      dataKey="blocked"
+                      stroke="#f97316"
+                      fill="#f97316"
+                      fillOpacity={0.2}
+                    />
+                  </AreaChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Bot Block Reasons */}
+          {chartData!.botReasonBreakdown?.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>{t("blockReasons")}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={botReasonConfig}>
+                  <BarChart data={chartData!.botReasonBreakdown}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="reason" tick={{ fontSize: 9 }} />
+                    <YAxis tick={{ fontSize: 10 }} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="count" fill="#f97316" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Bot Blocked by Country */}
+          {chartData!.botTopCountries?.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>{t("topBlockedCountries")}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={botCountryConfig}>
+                  <BarChart
+                    data={chartData!.botTopCountries}
+                    layout="vertical"
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" tick={{ fontSize: 10 }} />
+                    <YAxis
+                      type="category"
+                      dataKey="country"
+                      tick={{ fontSize: 10 }}
+                      width={60}
+                    />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="count" fill="#ef4444" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ChartContainer>
               </CardContent>
