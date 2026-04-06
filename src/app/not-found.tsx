@@ -12,9 +12,9 @@ export default function NotFound() {
           <h1 className="text-2xl font-bold mb-2">{t("pageNotFound")}</h1>
           <p className="text-muted-foreground mb-2">{t("pageNotFoundDesc")}</p>
           <p className="text-sm text-muted-foreground/60 italic mb-8">{t("pageNotFoundSubtext")}</p>
-          <Button asChild>
-            <Link href="/">{t("back")}</Link>
-          </Button>
+          <Link href="/">
+            <Button>{t("back")}</Button>
+          </Link>
         </CardContent>
       </Card>
     </div>

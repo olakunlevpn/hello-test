@@ -15,9 +15,9 @@ export default function Forbidden() {
           <p className="text-6xl font-bold text-destructive/20 mb-4">403</p>
           <h1 className="text-2xl font-bold mb-2">{t("forbidden")}</h1>
           <p className="text-sm text-muted-foreground/60 italic mb-8">{t("forbiddenSubtext")}</p>
-          <Button asChild>
-            <Link href="/">{t("back")}</Link>
-          </Button>
+          <Link href="/">
+            <Button>{t("back")}</Button>
+          </Link>
         </CardContent>
       </Card>
     </div>
