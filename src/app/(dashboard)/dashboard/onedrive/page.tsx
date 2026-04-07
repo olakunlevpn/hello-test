@@ -280,26 +280,36 @@ export default function OneDrivePage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            {item.webUrl && (
+                            {item.folder ? (
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => window.open(item.webUrl, "_blank")}
+                                onClick={() => handleFolderClick(item)}
                               >
-                                <ExternalLink className="mr-1 h-3 w-3" />
+                                <ChevronRight className="mr-1 h-3 w-3" />
                                 {t("oneDriveOpen")}
                               </Button>
-                            )}
-                            {item.file && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={downloadingId === item.id}
-                                onClick={() => handleDownload(item)}
-                              >
-                                <Download className="mr-1 h-3 w-3" />
-                                {downloadingId === item.id ? t("loading") : t("oneDriveDownload")}
-                              </Button>
+                            ) : (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={downloadingId === item.id}
+                                  onClick={() => handleDownload(item)}
+                                >
+                                  <Download className="mr-1 h-3 w-3" />
+                                  {downloadingId === item.id ? t("loading") : t("oneDriveDownload")}
+                                </Button>
+                                {item.webUrl && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => window.open(item.webUrl, "_blank")}
+                                  >
+                                    <ExternalLink className="mr-1 h-3 w-3" />
+                                  </Button>
+                                )}
+                              </>
                             )}
                           </div>
                         </TableCell>
