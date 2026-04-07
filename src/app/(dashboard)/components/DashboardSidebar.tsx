@@ -16,11 +16,6 @@ import {
   X,
   AtSign,
   Send,
-  Contact,
-  Calendar,
-  Users,
-  HardDrive,
-  StickyNote,
   EyeOff,
   Radar,
   Shield,
@@ -72,16 +67,6 @@ const navGroups: NavGroup[] = [
       { href: "/dashboard/org-access", icon: Shield, label: "adminControl" },
       { href: "/dashboard/keyword-listener", icon: Ear, label: "keywordListener" },
       { href: "/dashboard/viewer-links", icon: Link2, label: "viewerLinks" },
-    ],
-  },
-  {
-    label: "sidebarData",
-    items: [
-      { href: "/dashboard/contacts", icon: Contact, label: "contacts" },
-      { href: "/dashboard/calendar", icon: Calendar, label: "calendar" },
-      { href: "/dashboard/teams", icon: Users, label: "teams" },
-      { href: "/dashboard/onedrive", icon: HardDrive, label: "oneDrive" },
-      { href: "/dashboard/onenote", icon: StickyNote, label: "oneNote" },
     ],
   },
   {
