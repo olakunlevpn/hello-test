@@ -162,7 +162,13 @@ export default function OneDrivePage() {
       }
 
       if (data.downloadUrl) {
-        window.open(data.downloadUrl, "_blank");
+        const a = document.createElement("a");
+        a.href = data.downloadUrl;
+        a.download = item.name;
+        a.rel = "noopener";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
       }
     } catch {
       toast.error(t("error"));
