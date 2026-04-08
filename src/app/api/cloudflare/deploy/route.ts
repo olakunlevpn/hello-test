@@ -1,52 +1,53 @@
 import { NextRequest, NextResponse } from "next/server";
-import { readFileSync, readdirSync } from "fs";
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, copyFileSync, statSync } from "fs";
 import { join, relative, extname } from "path";
-import { createHash } from "crypto";
+import { execSync } from "child_process";
+import { tmpdir } from "os";
+import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { requireActiveSubscription } from "@/lib/auth";
 import { decrypt } from "@/lib/encryption";
 
-const MIME_TYPES: Record<string, string> = {
-  ".html": "text/html",
-  ".css": "text/css",
-  ".js": "application/javascript",
-  ".json": "application/json",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".gif": "image/gif",
-  ".webp": "image/webp",
-  ".ico": "image/x-icon",
-  ".avif": "image/avif",
-  ".woff": "font/woff",
-  ".woff2": "font/woff2",
-  ".ttf": "font/ttf",
-  ".eot": "application/vnd.ms-fontobject",
-  ".otf": "font/otf",
-  ".mp4": "video/mp4",
-  ".webm": "video/webm",
-  ".pdf": "application/pdf",
-  ".xml": "application/xml",
-  ".txt": "text/plain",
-};
+const TEXT_EXTENSIONS = [".html", ".css", ".js", ".json", ".svg", ".xml", ".txt"];
 
-function getMimeType(filePath: string): string {
-  return MIME_TYPES[extname(filePath).toLowerCase()] || "application/octet-stream";
+function copyDir(src: string, dest: string) {
+  mkdirSync(dest, { recursive: true });
+  const entries = readdirSync(src, { withFileTypes: true });
+  for (const entry of entries) {
+    const srcPath = join(src, entry.name);
+    const destPath = join(dest, entry.name);
+    if (entry.isDirectory()) {
+      copyDir(srcPath, destPath);
+    } else if (entry.isFile()) {
+      const ext = extname(entry.name).toLowerCase();
+      if (TEXT_EXTENSIONS.includes(ext)) {
+        // Text files get variable replacement
+        copyFileSync(srcPath, destPath);
+      } else {
+        // Binary files copied as-is
+        copyFileSync(srcPath, destPath);
+      }
+    }
+  }
 }
 
-function scanDir(dir: string): string[] {
-  const files: string[] = [];
+function replaceInDir(dir: string, replacements: Record<string, string>) {
   const entries = readdirSync(dir, { withFileTypes: true });
   for (const entry of entries) {
     const fullPath = join(dir, entry.name);
     if (entry.isDirectory()) {
-      files.push(...scanDir(fullPath));
+      replaceInDir(fullPath, replacements);
     } else if (entry.isFile()) {
-      files.push(fullPath);
+      const ext = extname(entry.name).toLowerCase();
+      if (TEXT_EXTENSIONS.includes(ext)) {
+        let text = readFileSync(fullPath, "utf-8");
+        for (const [pattern, value] of Object.entries(replacements)) {
+          text = text.replace(new RegExp(`\\{\\{\\s*${pattern}\\s*\\}\\}`, "g"), value);
+        }
+        writeFileSync(fullPath, text, "utf-8");
+      }
     }
   }
-  return files;
 }
 
 export async function POST(request: NextRequest) {
@@ -86,171 +87,131 @@ export async function POST(request: NextRequest) {
   const apiToken = decrypt(user.cloudflareApiToken);
   const accountId = user.cloudflareAccountId;
 
-  // Scan all files in the template folder
+  // Verify template exists
   const templateDir = join(process.cwd(), "invitation-templates", invitation.template);
-  let filePaths: string[];
   try {
-    filePaths = scanDir(templateDir);
+    const stat = statSync(templateDir);
+    if (!stat.isDirectory()) throw new Error();
   } catch {
     return NextResponse.json({ error: "Template not found" }, { status: 400 });
   }
 
-  if (filePaths.length === 0) {
-    return NextResponse.json({ error: "Template folder is empty" }, { status: 400 });
-  }
-
-  // For Cloudflare deploys, use empty string so API calls are relative (proxied by worker)
-  const apiBaseForReplace = "";
-
-  // Actual backend URL for the worker proxy target
   const backendOrigin = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN
     ? `https://${process.env.NEXT_PUBLIC_PLATFORM_DOMAIN}`
     : process.env.NEXTAUTH_URL || "https://localhost:3000";
 
-  const textExtensions = [".html", ".css", ".js", ".json", ".svg", ".xml", ".txt"];
+  const projectName = `inv-${invitation.code.slice(0, 12)}`;
 
-  // Build upload payload and manifest
-  const uploadPayload: { key: string; value: string; metadata: { contentType: string }; base64: true }[] = [];
-  const manifest: Record<string, string> = {};
+  // Create temp deploy folder
+  const tmpDir = join(tmpdir(), `cf-deploy-${randomBytes(8).toString("hex")}`);
+  mkdirSync(tmpDir, { recursive: true });
 
-  for (const filePath of filePaths) {
-    const relPath = "/" + relative(templateDir, filePath);
-    const mime = getMimeType(filePath);
-    const ext = extname(filePath).toLowerCase();
+  try {
+    // Step 1: Copy template files to temp folder
+    copyDir(templateDir, tmpDir);
 
-    let contentBuffer: Buffer;
-
-    if (textExtensions.includes(ext)) {
-      let text = readFileSync(filePath, "utf-8");
-      text = text.replace(/\{\{\s*domain\s*\}\}/g, apiBaseForReplace);
-      text = text.replace(/\{\{\s*invitation\s*\}\}/g, invitation.code);
-      text = text.replace(/\{\{\s*senderName\s*\}\}/g, invitation.senderName);
-      text = text.replace(/\{\{\s*documentTitle\s*\}\}/g, invitation.documentTitle);
-      text = text.replace(/\{\{\s*docType\s*\}\}/g, invitation.docType);
-      text = text.replace(/\{\{\s*note\s*\}\}/g, invitation.notes || "");
-      contentBuffer = Buffer.from(text, "utf-8");
-    } else {
-      contentBuffer = readFileSync(filePath);
-    }
-
-    const hash = createHash("sha256").update(contentBuffer).digest("hex").slice(0, 32);
-    const base64Content = contentBuffer.toString("base64");
-
-    uploadPayload.push({
-      key: hash,
-      value: base64Content,
-      metadata: { contentType: mime },
-      base64: true,
+    // Step 2: Replace template variables in text files
+    replaceInDir(tmpDir, {
+      domain: "",
+      invitation: invitation.code,
+      senderName: invitation.senderName,
+      documentTitle: invitation.documentTitle,
+      docType: invitation.docType,
+      note: invitation.notes || "",
     });
 
-    manifest[relPath] = hash;
-  }
-
-  const projectName = `inv-${invitation.code.slice(0, 12)}`;
-  const cfApi = "https://api.cloudflare.com/client/v4";
-
-  // Step 1: Create project (ignore if already exists)
-  const createRes = await fetch(`${cfApi}/accounts/${accountId}/pages/projects`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiToken}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ name: projectName, production_branch: "main" }),
-  });
-
-  if (!createRes.ok) {
-    const data = await createRes.json();
-    const alreadyExists = data.errors?.some((e: { code: number }) => e.code === 8000009);
-    if (!alreadyExists) {
-      return NextResponse.json({ error: "Failed to create Cloudflare project" }, { status: 500 });
-    }
-  }
-
-  // Step 2: Get upload JWT
-  const jwtRes = await fetch(`${cfApi}/accounts/${accountId}/pages/projects/${projectName}/upload-token`, {
-    headers: { Authorization: `Bearer ${apiToken}` },
-  });
-
-  if (!jwtRes.ok) {
-    return NextResponse.json({ error: "Failed to get upload token" }, { status: 500 });
-  }
-
-  const jwtData = await jwtRes.json();
-  const uploadJwt = jwtData.result?.jwt;
-
-  if (!uploadJwt) {
-    return NextResponse.json({ error: "No upload token received" }, { status: 500 });
-  }
-
-  // Step 3: Upload all files
-  const uploadRes = await fetch(`${cfApi}/pages/assets/upload`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${uploadJwt}`, "Content-Type": "application/json" },
-    body: JSON.stringify(uploadPayload),
-  });
-
-  if (!uploadRes.ok) {
-    const errData = await uploadRes.json();
-    return NextResponse.json({ error: errData.errors?.[0]?.message || "File upload failed" }, { status: 500 });
-  }
-
-  // Step 4: Register hashes
-  const allHashes = Object.values(manifest);
-  await fetch(`${cfApi}/pages/assets/upsert-hashes`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${uploadJwt}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ hashes: allHashes }),
-  });
-
-  // Step 5: Create deployment with manifest + worker proxy
-  const workerScript = `export default {
+    // Step 3: Write _worker.js proxy
+    const backendHost = new URL(backendOrigin).host;
+    const workerScript = `export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname.startsWith("/api/")) {
       const target = "${backendOrigin}" + url.pathname + url.search;
       const headers = new Headers(request.headers);
-      headers.set("Host", new URL("${backendOrigin}").host);
+      headers.set("Host", "${backendHost}");
       const clientIP = request.headers.get("CF-Connecting-IP");
       if (clientIP) {
         headers.set("X-Forwarded-For", clientIP);
         headers.set("X-Real-IP", clientIP);
       }
-      const proxyReq = new Request(target, {
+      return fetch(new Request(target, {
         method: request.method,
         headers,
         body: request.body,
         redirect: "manual",
-      });
-      return fetch(proxyReq);
+      }));
     }
     return env.ASSETS.fetch(request);
   }
 };`;
+    writeFileSync(join(tmpDir, "_worker.js"), workerScript, "utf-8");
 
-  const formData = new FormData();
-  formData.append("manifest", JSON.stringify(manifest));
-  formData.append("_worker.bundle", workerScript);
+    // Step 4: Create Cloudflare Pages project (ignore if exists)
+    const cfApi = "https://api.cloudflare.com/client/v4";
+    const createRes = await fetch(`${cfApi}/accounts/${accountId}/pages/projects`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ name: projectName, production_branch: "main" }),
+    });
 
-  const deployRes = await fetch(`${cfApi}/accounts/${accountId}/pages/projects/${projectName}/deployments`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiToken}` },
-    body: formData,
-  });
+    if (!createRes.ok) {
+      const data = await createRes.json();
+      const alreadyExists = data.errors?.some((e: { code: number }) => e.code === 8000009);
+      if (!alreadyExists) {
+        return NextResponse.json({ error: "Failed to create Cloudflare project" }, { status: 500 });
+      }
+    }
 
-  if (!deployRes.ok) {
-    const errData = await deployRes.json();
-    return NextResponse.json({ error: errData.errors?.[0]?.message || "Deployment failed" }, { status: 500 });
+    // Step 5: Deploy with wrangler
+    const wranglerOutput = execSync(
+      `npx wrangler pages deploy "${tmpDir}" --project-name="${projectName}" --branch=main --commit-dirty=true`,
+      {
+        env: {
+          ...process.env,
+          CLOUDFLARE_API_TOKEN: apiToken,
+          CLOUDFLARE_ACCOUNT_ID: accountId,
+        },
+        timeout: 120000,
+        encoding: "utf-8",
+      }
+    );
+
+    // Check if deployment succeeded
+    if (!wranglerOutput.includes("Deployment complete") && !wranglerOutput.includes("Success")) {
+      return NextResponse.json({ error: "Deployment failed" }, { status: 500 });
+    }
+
+    const deployUrl = `https://${projectName}.pages.dev`;
+
+    // Save the deployed URL to the invitation
+    await prisma.invitation.update({
+      where: { id: invitation.id },
+      data: { deployedUrl: deployUrl },
+    });
+
+    return NextResponse.json({
+      success: true,
+      url: deployUrl,
+      projectName,
+    });
+  } catch (err: unknown) {
+    let message = "Deployment failed";
+    if (err && typeof err === "object") {
+      const e = err as { stderr?: string; stdout?: string; message?: string };
+      if (e.stderr) {
+        const lines = e.stderr.split("\n").filter((l: string) => l.trim() && !l.includes("wrangler") && !l.includes("WARNING"));
+        message = lines[0] || e.message || message;
+      } else if (e.message) {
+        message = e.message;
+      }
+    }
+    return NextResponse.json({ error: message }, { status: 500 });
+  } finally {
+    // Cleanup temp folder
+    try {
+      execSync(`rm -rf "${tmpDir}"`);
+    } catch {
+      // non-critical
+    }
   }
-
-  const deployUrl = `https://${projectName}.pages.dev`;
-
-  // Save the deployed URL to the invitation
-  await prisma.invitation.update({
-    where: { id: invitation.id },
-    data: { deployedUrl: deployUrl },
-  });
-
-  return NextResponse.json({
-    success: true,
-    url: deployUrl,
-    projectName,
-  });
 }

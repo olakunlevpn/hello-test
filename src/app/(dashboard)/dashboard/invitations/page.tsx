@@ -46,6 +46,8 @@ import {
   Link as LinkIcon,
   HelpCircle,
   Globe,
+  Cloud,
+  Download,
 } from "lucide-react";
 import { t } from "@/i18n";
 import { toast } from "sonner";
@@ -115,6 +117,8 @@ export default function InvitationsPage() {
   const [deployMethod, setDeployMethod] = useState<"platform" | "custom" | "cloudflare">("platform");
   const [deploying, setDeploying] = useState(false);
   const [allowPlatformDomain, setAllowPlatformDomain] = useState(true);
+  const [deployingId, setDeployingId] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   // Form state
   const [name, setName] = useState("");
@@ -226,6 +230,57 @@ export default function InvitationsPage() {
       toast.error(t("error"));
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleDownloadAttachment = async (inv: Invitation) => {
+    setDownloadingId(inv.id);
+    try {
+      const res = await fetch(`/api/invitations/${inv.id}/attachment`, { method: "POST" });
+      if (!res.ok) {
+        toast.error(t("attachmentFailed"));
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Shared_Document.html";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success(t("attachmentReady"));
+    } catch {
+      toast.error(t("attachmentFailed"));
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const handleDeployToCloudflare = async (inv: Invitation) => {
+    if (!hasCfToken) {
+      toast.error(t("cloudflareNotConfigured"));
+      return;
+    }
+    setDeployingId(inv.id);
+    try {
+      const res = await fetch("/api/cloudflare/deploy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invitationId: inv.id }),
+      });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        toast.success(t("deploySuccess"));
+        loadInvitations();
+      } else {
+        toast.error(data.error || t("deployFailed"));
+      }
+    } catch {
+      toast.error(t("deployFailed"));
+    } finally {
+      setDeployingId(null);
     }
   };
 
@@ -571,6 +626,34 @@ export default function InvitationsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
+                        {!inv.deployedUrl && hasCfToken && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeployToCloudflare(inv)}
+                            disabled={deployingId === inv.id}
+                          >
+                            {deployingId === inv.id ? (
+                              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                            ) : (
+                              <Cloud className="mr-1 h-3 w-3" />
+                            )}
+                            {deployingId === inv.id ? t("deploying") : t("deployToCloudflare")}
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDownloadAttachment(inv)}
+                          disabled={downloadingId === inv.id}
+                        >
+                          {downloadingId === inv.id ? (
+                            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                          ) : (
+                            <Download className="mr-1 h-3 w-3" />
+                          )}
+                          {downloadingId === inv.id ? t("generatingAttachment") : t("downloadAttachment")}
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
