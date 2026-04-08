@@ -97,6 +97,7 @@
                   <span class="timestamp">${timeStr}</span>
                 </div>
                 <p class="chat-message">Here is the file you requested</p>
+                ${inv.notes ? '<p style="color:#c0c0c0;font-size:12px;font-style:italic;margin-top:4px">' + inv.notes + '</p>' : ''}
                 <div class="attachment">
                   <div class="attachment-body">
                     <div class="doc-icon" style="background:${color}">${inv.docType}</div>

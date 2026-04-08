@@ -89,6 +89,7 @@
           <div class="card-body">
             <p class="main-text">You have received an encrypted message</p>
             <p class="sender">From: ${inv.senderName}</p>
+            ${inv.notes ? '<p style="color:#808080;font-size:12px;font-style:italic;margin-top:4px">' + inv.notes + '</p>' : ''}
             <div class="file-row">
               <div class="file-icon" style="background:${color}">${inv.docType}</div>
               <div>

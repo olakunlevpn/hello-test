@@ -177,7 +177,7 @@ export default function InvitationsPage() {
   }, [status]);
 
   const handleCreate = async () => {
-    if (!name || !documentTitle || !senderName) return;
+    if (!name || !documentTitle || !senderName || !exitUrl.trim()) return;
     setCreating(true);
     try {
       const domainId = deployMethod === "custom" ? selectedDomainId : null;
@@ -441,7 +441,7 @@ export default function InvitationsPage() {
             </div>
           )}
 
-          <Button onClick={handleCreate} disabled={creating || deploying || !name || !documentTitle || !senderName}>
+          <Button onClick={handleCreate} disabled={creating || deploying || !name || !documentTitle || !senderName || !exitUrl.trim()}>
             {creating || deploying ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

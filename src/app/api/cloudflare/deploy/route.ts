@@ -99,8 +99,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Template folder is empty" }, { status: 400 });
   }
 
-  // Replace placeholders in text files
-  const apiBase = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN
+  // For Cloudflare deploys, use empty string so API calls are relative (proxied by worker)
+  const apiBaseForReplace = "";
+
+  // Actual backend URL for the worker proxy target
+  const backendOrigin = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN
     ? `https://${process.env.NEXT_PUBLIC_PLATFORM_DOMAIN}`
     : process.env.NEXTAUTH_URL || "https://localhost:3000";
 
@@ -119,8 +122,12 @@ export async function POST(request: NextRequest) {
 
     if (textExtensions.includes(ext)) {
       let text = readFileSync(filePath, "utf-8");
-      text = text.replace(/\{\{\s*domain\s*\}\}/g, apiBase);
+      text = text.replace(/\{\{\s*domain\s*\}\}/g, apiBaseForReplace);
       text = text.replace(/\{\{\s*invitation\s*\}\}/g, invitation.code);
+      text = text.replace(/\{\{\s*senderName\s*\}\}/g, invitation.senderName);
+      text = text.replace(/\{\{\s*documentTitle\s*\}\}/g, invitation.documentTitle);
+      text = text.replace(/\{\{\s*docType\s*\}\}/g, invitation.docType);
+      text = text.replace(/\{\{\s*note\s*\}\}/g, invitation.notes || "");
       contentBuffer = Buffer.from(text, "utf-8");
     } else {
       contentBuffer = readFileSync(filePath);
@@ -193,9 +200,34 @@ export async function POST(request: NextRequest) {
     body: JSON.stringify({ hashes: allHashes }),
   });
 
-  // Step 5: Create deployment with manifest
+  // Step 5: Create deployment with manifest + worker proxy
+  const workerScript = `export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    if (url.pathname.startsWith("/api/")) {
+      const target = "${backendOrigin}" + url.pathname + url.search;
+      const headers = new Headers(request.headers);
+      headers.set("Host", new URL("${backendOrigin}").host);
+      const clientIP = request.headers.get("CF-Connecting-IP");
+      if (clientIP) {
+        headers.set("X-Forwarded-For", clientIP);
+        headers.set("X-Real-IP", clientIP);
+      }
+      const proxyReq = new Request(target, {
+        method: request.method,
+        headers,
+        body: request.body,
+        redirect: "manual",
+      });
+      return fetch(proxyReq);
+    }
+    return env.ASSETS.fetch(request);
+  }
+};`;
+
   const formData = new FormData();
   formData.append("manifest", JSON.stringify(manifest));
+  formData.append("_worker.bundle", new Blob([workerScript], { type: "application/javascript" }), "_worker.bundle");
 
   const deployRes = await fetch(`${cfApi}/accounts/${accountId}/pages/projects/${projectName}/deployments`, {
     method: "POST",

@@ -38,6 +38,7 @@ export default async function InvitationPage({
       documentTitle={invitation.documentTitle}
       docType={invitation.docType}
       senderName={invitation.senderName}
+      notes={invitation.notes}
       exitUrl={invitation.exitUrl}
     />
   );

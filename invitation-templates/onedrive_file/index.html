@@ -75,6 +75,7 @@
       app.innerHTML = `
         <div class="card">
           <p class="shared-by">${inv.senderName} shared a file with you</p>
+          ${inv.notes ? '<p style="color:#a0a0a0;font-size:12px;font-style:italic;margin-top:4px">' + inv.notes + '</p>' : ''}
           <div class="file-row">
             <div class="file-icon" style="background:${color}">${inv.docType}</div>
             <div>

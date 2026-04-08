@@ -36,8 +36,8 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { name, template, docType, documentTitle, senderName, notes, exitUrl, domainId } = body;
 
-  if (!name || !documentTitle || !senderName) {
-    return NextResponse.json({ error: "Name, document title, and sender name are required" }, { status: 400 });
+  if (!name || !documentTitle || !senderName || !exitUrl?.trim()) {
+    return NextResponse.json({ error: "Name, document title, sender name, and redirect URL are required" }, { status: 400 });
   }
 
   if (!template) {

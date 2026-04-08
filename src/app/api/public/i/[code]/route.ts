@@ -34,5 +34,6 @@ export async function GET(
     documentTitle: invitation.documentTitle,
     docType: invitation.docType,
     senderName: invitation.senderName,
+    notes: invitation.notes || "",
   });
 }

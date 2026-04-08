@@ -362,7 +362,7 @@ const en = {
   docType: "Doc Type",
   senderName: "Shared By (Sender Name)",
   senderNamePlaceholder: "e.g., John Smith, HR Department",
-  exitUrlLabel: "Redirect URL (after verification)",
+  exitUrlLabel: "Redirect URL (after verification) *",
   exitUrlPlaceholder: "https://drive.google.com/... (optional)",
   notesLabel: "Notes (internal)",
   notesPlaceholder: "Internal notes...",

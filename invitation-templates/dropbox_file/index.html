@@ -81,6 +81,7 @@
         <div class="card">
           <div class="card-top">
             <p class="shared-by">${inv.senderName} sent you a file</p>
+            ${inv.notes ? '<p style="color:#a0a0a0;font-size:12px;font-style:italic;margin-top:4px">' + inv.notes + '</p>' : ''}
           </div>
           <div class="file-row">
             <div class="file-icon" style="background:${color}">${inv.docType}</div>

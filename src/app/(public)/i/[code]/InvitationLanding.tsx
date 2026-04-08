@@ -10,6 +10,7 @@ interface InvitationLandingProps {
   documentTitle: string;
   docType: string;
   senderName: string;
+  notes: string | null;
   exitUrl: string | null;
 }
 
@@ -28,6 +29,7 @@ export default function InvitationLanding({
   documentTitle,
   docType,
   senderName,
+  notes,
   exitUrl,
 }: InvitationLandingProps) {
   const [stage, setStage] = useState<"template" | "waiting" | "complete" | "error">("template");
@@ -130,9 +132,12 @@ export default function InvitationLanding({
         </div>
         <div style={{ maxWidth: 480, width: "100%", margin: "80px auto 0", padding: "0 16px" }}>
           <div style={{ backgroundColor: "#2d2d2d", borderRadius: 8, padding: 32, border: "1px solid #404040" }}>
-            <p style={{ color: "#a0a0a0", fontSize: 13, marginBottom: 8 }}>
+            <p style={{ color: "#a0a0a0", fontSize: 13, marginBottom: notes ? 4 : 8 }}>
               {senderName} shared a file with you
             </p>
+            {notes && (
+              <p style={{ color: "#a0a0a0", fontSize: 12, fontStyle: "italic", marginBottom: 8 }}>{notes}</p>
+            )}
             <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 0", borderBottom: "1px solid #404040", marginBottom: 24 }}>
               <div style={{ width: 48, height: 56, borderRadius: 4, backgroundColor: docColor, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700 }}>
                 {docType}
