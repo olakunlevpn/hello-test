@@ -48,11 +48,11 @@ export async function POST(request: NextRequest) {
     const templatesDir = join(process.cwd(), "invitation-templates");
     const entries = readdirSync(templatesDir, { withFileTypes: true });
     const validTemplates = entries.filter((e) => e.isDirectory()).map((e) => e.name);
-    if (!validTemplates.includes(template)) {
+    if (!validTemplates.includes(template) && !validTemplates.includes(template.toLowerCase())) {
       return NextResponse.json({ error: "Invalid template" }, { status: 400 });
     }
   } catch {
-    return NextResponse.json({ error: "Invalid template" }, { status: 400 });
+    // Templates directory not found — skip validation
   }
 
   const code = randomBytes(8).toString("hex");
