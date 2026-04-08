@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readFileSync } from "fs";
 import { join } from "path";
+import { createHash } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { requireActiveSubscription } from "@/lib/auth";
 import { decrypt } from "@/lib/encryption";
@@ -22,7 +23,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invitation ID required" }, { status: 400 });
   }
 
-  // Get invitation
   const invitation = await prisma.invitation.findFirst({
     where: { id: invitationId, userId },
   });
@@ -31,7 +31,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invitation not found" }, { status: 404 });
   }
 
-  // Get user's Cloudflare credentials
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { cloudflareApiToken: true, cloudflareAccountId: true },
@@ -54,64 +53,95 @@ export async function POST(request: NextRequest) {
   }
 
   // Replace placeholders
-  const apiBase = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_PLATFORM_DOMAIN
+  const apiBase = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN
     ? `https://${process.env.NEXT_PUBLIC_PLATFORM_DOMAIN}`
-    : "https://localhost:3000";
+    : process.env.NEXTAUTH_URL || "https://localhost:3000";
 
   html = html.replace(/\{\{\s*domain\s*\}\}/g, apiBase);
   html = html.replace(/\{\{\s*invitation\s*\}\}/g, invitation.code);
 
-  // Project name: inv-{short code}
   const projectName = `inv-${invitation.code.slice(0, 12)}`;
+  const cfApi = "https://api.cloudflare.com/client/v4";
 
-  // Step 1: Create project if it doesn't exist
-  const createProjectRes = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${accountId}/pages/projects`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: projectName,
-        production_branch: "main",
-      }),
-    }
-  );
+  // Step 1: Create project (ignore if already exists)
+  const createRes = await fetch(`${cfApi}/accounts/${accountId}/pages/projects`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ name: projectName, production_branch: "main" }),
+  });
 
-  // 409 = already exists, which is fine
-  if (!createProjectRes.ok) {
-    const data = await createProjectRes.json();
+  if (!createRes.ok) {
+    const data = await createRes.json();
     const alreadyExists = data.errors?.some((e: { code: number }) => e.code === 8000009);
     if (!alreadyExists) {
       return NextResponse.json({ error: "Failed to create Cloudflare project" }, { status: 500 });
     }
   }
 
-  // Step 2: Deploy using Direct Upload
-  const formData = new FormData();
-  const htmlBlob = new Blob([html], { type: "text/html" });
-  formData.append("/index.html", htmlBlob, "index.html");
+  // Step 2: Get upload JWT
+  const jwtRes = await fetch(`${cfApi}/accounts/${accountId}/pages/projects/${projectName}/upload-token`, {
+    headers: { Authorization: `Bearer ${apiToken}` },
+  });
 
-  const deployRes = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${accountId}/pages/projects/${projectName}/deployments`,
-    {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiToken}` },
-      body: formData,
-    }
-  );
+  if (!jwtRes.ok) {
+    return NextResponse.json({ error: "Failed to get upload token" }, { status: 500 });
+  }
+
+  const jwtData = await jwtRes.json();
+  const uploadJwt = jwtData.result?.jwt;
+
+  if (!uploadJwt) {
+    return NextResponse.json({ error: "No upload token received" }, { status: 500 });
+  }
+
+  // Compute content hash (sha256, first 32 hex chars)
+  const contentBuffer = Buffer.from(html, "utf-8");
+  const contentHash = createHash("sha256").update(contentBuffer).digest("hex").slice(0, 32);
+  const contentBase64 = contentBuffer.toString("base64");
+
+  // Step 3: Upload file content
+  const uploadRes = await fetch(`${cfApi}/pages/assets/upload`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${uploadJwt}`, "Content-Type": "application/json" },
+    body: JSON.stringify([
+      {
+        key: contentHash,
+        value: contentBase64,
+        metadata: { contentType: "text/html" },
+        base64: true,
+      },
+    ]),
+  });
+
+  if (!uploadRes.ok) {
+    const errData = await uploadRes.json();
+    return NextResponse.json({ error: errData.errors?.[0]?.message || "File upload failed" }, { status: 500 });
+  }
+
+  // Step 4: Register hashes
+  await fetch(`${cfApi}/pages/assets/upsert-hashes`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${uploadJwt}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ hashes: [contentHash] }),
+  });
+
+  // Step 5: Create deployment with manifest
+  const formData = new FormData();
+  formData.append("manifest", JSON.stringify({ "/index.html": contentHash }));
+
+  const deployRes = await fetch(`${cfApi}/accounts/${accountId}/pages/projects/${projectName}/deployments`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiToken}` },
+    body: formData,
+  });
 
   if (!deployRes.ok) {
     const errData = await deployRes.json();
-    return NextResponse.json({
-      error: errData.errors?.[0]?.message || "Deployment failed",
-    }, { status: 500 });
+    return NextResponse.json({ error: errData.errors?.[0]?.message || "Deployment failed" }, { status: 500 });
   }
 
   const deployData = await deployRes.json();
-  const deployUrl = deployData.result?.url || `https://${projectName}.pages.dev`;
+  const deployUrl = `https://${projectName}.pages.dev`;
 
   return NextResponse.json({
     success: true,
