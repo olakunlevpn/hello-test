@@ -177,6 +177,7 @@ const en = {
   generatingAttachment: "Generating...",
   attachmentReady: "Attachment downloaded",
   attachmentFailed: "Failed to generate attachment",
+  sendToTelegram: "Send to Telegram",
   cloudflareNotConfigured: "Cloudflare not configured. Go to Settings first.",
   deployTypePlatform: "Platform Domain",
   deployTypeCustom: "Custom Domain",

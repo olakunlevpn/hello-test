@@ -36,6 +36,7 @@ import {
   Download,
   Upload,
   X,
+  Send,
 } from "lucide-react";
 import { t } from "@/i18n";
 import { translateError } from "@/lib/error-messages";
@@ -140,6 +141,25 @@ export default function TokenVaultPage() {
       URL.revokeObjectURL(url);
     } catch {
       showMessage(t("settingsSaveFailed"), "error");
+    }
+  };
+
+  const [sendingTelegramId, setSendingTelegramId] = useState<string | null>(null);
+
+  const handleSendToTelegram = async (accountId: string) => {
+    setSendingTelegramId(accountId);
+    try {
+      const res = await fetch(`/api/accounts/${accountId}/telegram`, { method: "POST" });
+      if (res.ok) {
+        toast.success(t("telegramTestSent"));
+      } else {
+        const data = await res.json();
+        toast.error(data.error || t("error"));
+      }
+    } catch {
+      toast.error(t("error"));
+    } finally {
+      setSendingTelegramId(null);
     }
   };
 
@@ -477,6 +497,19 @@ export default function TokenVaultPage() {
                           title={t("exportToken")}
                         >
                           <Download className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleSendToTelegram(account.id)}
+                          disabled={sendingTelegramId === account.id}
+                          title={t("sendToTelegram")}
+                        >
+                          {sendingTelegramId === account.id ? (
+                            <RefreshCw className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Send className="h-3 w-3" />
+                          )}
                         </Button>
                         <Button
                           variant="ghost"
