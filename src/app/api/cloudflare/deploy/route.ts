@@ -227,7 +227,7 @@ export async function POST(request: NextRequest) {
 
   const formData = new FormData();
   formData.append("manifest", JSON.stringify(manifest));
-  formData.append("_worker.bundle", new Blob([workerScript], { type: "application/javascript" }), "_worker.bundle");
+  formData.append("_worker.bundle", workerScript);
 
   const deployRes = await fetch(`${cfApi}/accounts/${accountId}/pages/projects/${projectName}/deployments`, {
     method: "POST",
