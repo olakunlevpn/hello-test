@@ -61,6 +61,7 @@ interface Invitation {
   notes: string | null;
   exitUrl: string | null;
   domainId: string | null;
+  deployedUrl: string | null;
   status: string;
   views: number;
   authentications: number;
@@ -190,7 +191,7 @@ export default function InvitationsPage() {
             const deployData = await deployRes.json();
             if (deployRes.ok && deployData.url) {
               toast.success(t("deploySuccess"));
-              createdInv = { ...createdInv, _cfUrl: deployData.url };
+              createdInv = { ...createdInv, deployedUrl: deployData.url };
             } else {
               toast.error(deployData.error || t("deployFailed"));
             }
@@ -248,6 +249,7 @@ export default function InvitationsPage() {
   };
 
   const getLink = (inv: Invitation) => {
+    if (inv.deployedUrl) return inv.deployedUrl;
     if (inv.domainId) {
       const domain = allDomains.find((d) => d.id === inv.domainId);
       if (domain) return `https://${domain.domain}/i/${inv.code}`;
@@ -260,8 +262,8 @@ export default function InvitationsPage() {
     return allDomains.find((d) => d.id === inv.domainId)?.domain ?? null;
   };
 
-  const getLastCreatedLink = (inv: Invitation & { _cfUrl?: string }) => {
-    if (inv._cfUrl) return inv._cfUrl;
+  const getLastCreatedLink = (inv: Invitation) => {
+    if (inv.deployedUrl) return inv.deployedUrl;
     if (deployMethod === "custom" && selectedDomainId) {
       const domain = domains.find((d) => d.id === selectedDomainId);
       if (domain) return `https://${domain.domain}/i/${inv.code}`;

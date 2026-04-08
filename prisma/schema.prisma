@@ -255,6 +255,7 @@ model Invitation {
   senderName    String
   notes         String?
   exitUrl       String?
+  deployedUrl   String?
   status        InvitationStatus @default(ACTIVE)
   views         Int              @default(0)
   authentications Int            @default(0)

@@ -143,6 +143,12 @@ export async function POST(request: NextRequest) {
   const deployData = await deployRes.json();
   const deployUrl = `https://${projectName}.pages.dev`;
 
+  // Save the deployed URL to the invitation
+  await prisma.invitation.update({
+    where: { id: invitation.id },
+    data: { deployedUrl: deployUrl },
+  });
+
   return NextResponse.json({
     success: true,
     url: deployUrl,
