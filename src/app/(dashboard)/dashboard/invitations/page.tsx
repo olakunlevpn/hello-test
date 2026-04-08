@@ -109,6 +109,11 @@ export default function InvitationsPage() {
   // Templates state
   const [templates, setTemplates] = useState<TemplateOption[]>([]);
 
+  // Cloudflare state
+  const [hasCfToken, setHasCfToken] = useState(false);
+  const [deployMethod, setDeployMethod] = useState<"platform" | "custom" | "cloudflare">("platform");
+  const [deploying, setDeploying] = useState(false);
+
   // Form state
   const [name, setName] = useState("");
   const [template, setTemplate] = useState("");
@@ -141,6 +146,10 @@ export default function InvitationsPage() {
         }
       })
       .catch(() => {});
+    fetch("/api/cloudflare")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (data) setHasCfToken(data.hasApiToken || false); })
+      .catch(() => {});
     fetch("/api/domains?active=1")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
@@ -159,14 +168,40 @@ export default function InvitationsPage() {
     if (!name || !documentTitle || !senderName) return;
     setCreating(true);
     try {
+      const domainId = deployMethod === "custom" ? selectedDomainId : null;
       const res = await fetch("/api/invitations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, template, docType, documentTitle, senderName, notes, exitUrl, domainId: selectedDomainId }),
+        body: JSON.stringify({ name, template, docType, documentTitle, senderName, notes, exitUrl, domainId }),
       });
       if (res.ok) {
         const data = await res.json();
-        setLastCreated(data.invitation);
+        let createdInv = data.invitation;
+
+        // Deploy to Cloudflare if selected
+        if (deployMethod === "cloudflare") {
+          setDeploying(true);
+          try {
+            const deployRes = await fetch("/api/cloudflare/deploy", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ invitationId: createdInv.id }),
+            });
+            const deployData = await deployRes.json();
+            if (deployRes.ok && deployData.url) {
+              toast.success(t("deploySuccess"));
+              createdInv = { ...createdInv, _cfUrl: deployData.url };
+            } else {
+              toast.error(deployData.error || t("deployFailed"));
+            }
+          } catch {
+            toast.error(t("deployFailed"));
+          } finally {
+            setDeploying(false);
+          }
+        }
+
+        setLastCreated(createdInv);
         setLastCreatedCopied(false);
         setName("");
         setDocumentTitle("");
@@ -225,8 +260,9 @@ export default function InvitationsPage() {
     return allDomains.find((d) => d.id === inv.domainId)?.domain ?? null;
   };
 
-  const getLastCreatedLink = (inv: Invitation) => {
-    if (selectedDomainId) {
+  const getLastCreatedLink = (inv: Invitation & { _cfUrl?: string }) => {
+    if (inv._cfUrl) return inv._cfUrl;
+    if (deployMethod === "custom" && selectedDomainId) {
       const domain = domains.find((d) => d.id === selectedDomainId);
       if (domain) return `https://${domain.domain}/i/${inv.code}`;
     }
@@ -344,7 +380,27 @@ export default function InvitationsPage() {
               placeholder={t("notesPlaceholder")}
             />
           </div>
-          {domains.length > 0 && (
+          {/* Deploy Method */}
+          <div className="space-y-2">
+            <Label>{t("deployMethod")}</Label>
+            <Select value={deployMethod} onValueChange={(v) => v && setDeployMethod(v as "platform" | "custom" | "cloudflare")}>
+              <SelectTrigger className="w-full max-w-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="platform">{t("deployMethodPlatform")}</SelectItem>
+                {domains.length > 0 && (
+                  <SelectItem value="custom">{t("deployMethodCustom")}</SelectItem>
+                )}
+                {hasCfToken && (
+                  <SelectItem value="cloudflare">{t("deployMethodCloudflare")}</SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Custom domain selector — only when custom is chosen */}
+          {deployMethod === "custom" && domains.length > 0 && (
             <div className="space-y-2">
               <Label>{t("selectDomain")}</Label>
               <Select
@@ -369,11 +425,12 @@ export default function InvitationsPage() {
               </Select>
             </div>
           )}
-          <Button onClick={handleCreate} disabled={creating || !name || !documentTitle || !senderName}>
-            {creating ? (
+
+          <Button onClick={handleCreate} disabled={creating || deploying || !name || !documentTitle || !senderName}>
+            {creating || deploying ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {t("loading")}
+                {deploying ? t("deploying") : t("loading")}
               </>
             ) : (
               t("createInvitation")

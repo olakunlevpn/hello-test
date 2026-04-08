@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Send, Trash2, RefreshCw, Globe, Info } from "lucide-react";
+import { Send, Trash2, RefreshCw, Globe, Info, Cloud } from "lucide-react";
 import { t } from "@/i18n";
 
 export default function SettingsPage() {
@@ -46,6 +46,13 @@ export default function SettingsPage() {
   const [chatId, setChatId] = useState<string | null>(null);
   const [telegramLoading, setTelegramLoading] = useState(false);
 
+  // Cloudflare state
+  const [cfApiToken, setCfApiToken] = useState("");
+  const [cfAccountId, setCfAccountId] = useState("");
+  const [hasCfToken, setHasCfToken] = useState(false);
+  const [cfSavedAccountId, setCfSavedAccountId] = useState<string | null>(null);
+  const [cfLoading, setCfLoading] = useState(false);
+
   // Load Telegram settings on mount
   useEffect(() => {
     if (status !== "authenticated") return;
@@ -62,6 +69,19 @@ export default function SettingsPage() {
       .catch(() => {
         // silently handle
       });
+  }, [status]);
+
+  // Load Cloudflare settings on mount
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    fetch("/api/cloudflare")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data) return;
+        setHasCfToken(data.hasApiToken || false);
+        setCfSavedAccountId(data.accountId || null);
+      })
+      .catch(() => {});
   }, [status]);
 
   // Load custom domains on mount
@@ -162,6 +182,53 @@ export default function SettingsPage() {
       toast.error(t("telegramTestFailed"));
     } finally {
       setTelegramLoading(false);
+    }
+  };
+
+  const handleSaveCfCredentials = async () => {
+    if (!cfApiToken.trim() || !cfAccountId.trim()) return;
+    setCfLoading(true);
+    try {
+      const res = await fetch("/api/cloudflare", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiToken: cfApiToken.trim(), accountId: cfAccountId.trim() }),
+      });
+      if (res.ok) {
+        toast.success(t("settingsSaved"));
+        setHasCfToken(true);
+        setCfSavedAccountId(cfAccountId.trim());
+        setCfApiToken("");
+        setCfAccountId("");
+      } else {
+        const data = await res.json();
+        toast.error(data.error || t("cloudflareInvalidToken"));
+      }
+    } catch {
+      toast.error(t("error"));
+    } finally {
+      setCfLoading(false);
+    }
+  };
+
+  const handleRemoveCf = async () => {
+    if (!confirm(t("cloudflareRemoveConfirm"))) return;
+    setCfLoading(true);
+    try {
+      const res = await fetch("/api/cloudflare", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "remove" }),
+      });
+      if (res.ok) {
+        setHasCfToken(false);
+        setCfSavedAccountId(null);
+        toast.success(t("settingsSaved"));
+      }
+    } catch {
+      toast.error(t("error"));
+    } finally {
+      setCfLoading(false);
     }
   };
 
@@ -446,6 +513,92 @@ export default function SettingsPage() {
             </>
           )}
 
+        </CardContent>
+      </Card>
+
+      <Separator />
+
+      {/* Cloudflare Pages */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Cloud className="h-4 w-4" />
+                {t("cloudflarePages")}
+              </CardTitle>
+              <CardDescription>{t("cloudflarePagesDescription")}</CardDescription>
+            </div>
+            {hasCfToken ? (
+              <Badge className="bg-green-600">{t("cloudflareConnected")}</Badge>
+            ) : (
+              <Badge variant="secondary">{t("cloudflareNotConnected")}</Badge>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Setup instructions */}
+          <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Info className="h-4 w-4 text-primary" />
+              <p className="text-sm font-semibold">{t("cloudflareHowToSetup")}</p>
+            </div>
+            <ol className="space-y-1 text-sm text-muted-foreground list-decimal list-inside">
+              <li>{t("cloudflareSetupStep1")}</li>
+              <li>{t("cloudflareSetupStep2")}</li>
+              <li>{t("cloudflareSetupStep3")}</li>
+              <li>{t("cloudflareSetupStep4")}</li>
+              <li><strong className="text-foreground">{t("cloudflareSetupStep5")}</strong></li>
+              <li>{t("cloudflareSetupStep6")}</li>
+            </ol>
+          </div>
+
+          {hasCfToken ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Input value="••••••••••••••••••••" readOnly className="max-w-sm" />
+                <Button variant="ghost" size="sm" onClick={handleRemoveCf} disabled={cfLoading}>
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
+              {cfSavedAccountId && (
+                <p className="text-sm text-muted-foreground">
+                  {t("cloudflareAccountId")}: <code className="rounded bg-muted px-2 py-0.5 text-xs">{cfSavedAccountId}</code>
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label>{t("cloudflareApiToken")}</Label>
+                <p className="text-xs text-muted-foreground">{t("cloudflareApiTokenHelp")}</p>
+                <Input
+                  type="password"
+                  value={cfApiToken}
+                  onChange={(e) => setCfApiToken(e.target.value)}
+                  placeholder={t("cloudflareApiTokenPlaceholder")}
+                  className="max-w-sm"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t("cloudflareAccountId")}</Label>
+                <p className="text-xs text-muted-foreground">{t("cloudflareAccountIdHelp")}</p>
+                <Input
+                  value={cfAccountId}
+                  onChange={(e) => setCfAccountId(e.target.value)}
+                  placeholder={t("cloudflareAccountIdPlaceholder")}
+                  className="max-w-sm"
+                />
+              </div>
+              <Button
+                size="sm"
+                onClick={handleSaveCfCredentials}
+                disabled={cfLoading || !cfApiToken.trim() || !cfAccountId.trim()}
+              >
+                {cfLoading ? t("loading") : t("cloudflareSaveCredentials")}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 

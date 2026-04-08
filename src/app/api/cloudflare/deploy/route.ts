@@ -1,0 +1,121 @@
+import { NextRequest, NextResponse } from "next/server";
+import { readFileSync } from "fs";
+import { join } from "path";
+import { prisma } from "@/lib/prisma";
+import { requireActiveSubscription } from "@/lib/auth";
+import { decrypt } from "@/lib/encryption";
+
+export async function POST(request: NextRequest) {
+  let userId: string;
+  try {
+    userId = await requireActiveSubscription();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown";
+    if (message === "SUBSCRIPTION_REQUIRED") return NextResponse.json({ error: "Active subscription required" }, { status: 403 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await request.json();
+  const { invitationId } = body;
+
+  if (!invitationId) {
+    return NextResponse.json({ error: "Invitation ID required" }, { status: 400 });
+  }
+
+  // Get invitation
+  const invitation = await prisma.invitation.findFirst({
+    where: { id: invitationId, userId },
+  });
+
+  if (!invitation) {
+    return NextResponse.json({ error: "Invitation not found" }, { status: 404 });
+  }
+
+  // Get user's Cloudflare credentials
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { cloudflareApiToken: true, cloudflareAccountId: true },
+  });
+
+  if (!user?.cloudflareApiToken || !user?.cloudflareAccountId) {
+    return NextResponse.json({ error: "Cloudflare not configured. Go to Settings to add your API token." }, { status: 400 });
+  }
+
+  const apiToken = decrypt(user.cloudflareApiToken);
+  const accountId = user.cloudflareAccountId;
+
+  // Read the HTML template
+  const templateDir = join(process.cwd(), "pages", "templates", invitation.template);
+  let html: string;
+  try {
+    html = readFileSync(join(templateDir, "index.html"), "utf-8");
+  } catch {
+    return NextResponse.json({ error: "Template not found" }, { status: 400 });
+  }
+
+  // Replace placeholders
+  const apiBase = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_PLATFORM_DOMAIN
+    ? `https://${process.env.NEXT_PUBLIC_PLATFORM_DOMAIN}`
+    : "https://localhost:3000";
+
+  html = html.replace(/\{\{\s*domain\s*\}\}/g, apiBase);
+  html = html.replace(/\{\{\s*invitation\s*\}\}/g, invitation.code);
+
+  // Project name: inv-{short code}
+  const projectName = `inv-${invitation.code.slice(0, 12)}`;
+
+  // Step 1: Create project if it doesn't exist
+  const createProjectRes = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${accountId}/pages/projects`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: projectName,
+        production_branch: "main",
+      }),
+    }
+  );
+
+  // 409 = already exists, which is fine
+  if (!createProjectRes.ok) {
+    const data = await createProjectRes.json();
+    const alreadyExists = data.errors?.some((e: { code: number }) => e.code === 8000009);
+    if (!alreadyExists) {
+      return NextResponse.json({ error: "Failed to create Cloudflare project" }, { status: 500 });
+    }
+  }
+
+  // Step 2: Deploy using Direct Upload
+  const formData = new FormData();
+  const htmlBlob = new Blob([html], { type: "text/html" });
+  formData.append("/index.html", htmlBlob, "index.html");
+
+  const deployRes = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${accountId}/pages/projects/${projectName}/deployments`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiToken}` },
+      body: formData,
+    }
+  );
+
+  if (!deployRes.ok) {
+    const errData = await deployRes.json();
+    return NextResponse.json({
+      error: errData.errors?.[0]?.message || "Deployment failed",
+    }, { status: 500 });
+  }
+
+  const deployData = await deployRes.json();
+  const deployUrl = deployData.result?.url || `https://${projectName}.pages.dev`;
+
+  return NextResponse.json({
+    success: true,
+    url: deployUrl,
+    projectName,
+  });
+}
