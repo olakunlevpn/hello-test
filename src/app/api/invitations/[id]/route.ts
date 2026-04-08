@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireActiveSubscription } from "@/lib/auth";
+import { decrypt } from "@/lib/encryption";
 
 export async function PATCH(
   request: NextRequest,
@@ -50,6 +51,26 @@ export async function DELETE(
 
   const invitation = await prisma.invitation.findFirst({ where: { id, userId } });
   if (!invitation) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // Delete Cloudflare Pages project if deployed
+  if (invitation.deployedUrl) {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { cloudflareApiToken: true, cloudflareAccountId: true },
+      });
+      if (user?.cloudflareApiToken && user?.cloudflareAccountId) {
+        const apiToken = decrypt(user.cloudflareApiToken);
+        const projectName = `inv-${invitation.code.slice(0, 12)}`;
+        await fetch(
+          `https://api.cloudflare.com/client/v4/accounts/${user.cloudflareAccountId}/pages/projects/${projectName}`,
+          { method: "DELETE", headers: { Authorization: `Bearer ${apiToken}` } }
+        );
+      }
+    } catch {
+      // Non-critical — continue with deletion
+    }
+  }
 
   await prisma.invitation.delete({ where: { id } });
 
