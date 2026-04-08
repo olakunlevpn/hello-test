@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
   const accountId = user.cloudflareAccountId;
 
   // Read the HTML template
-  const templateDir = join(process.cwd(), "pages", "templates", invitation.template);
+  const templateDir = join(process.cwd(), "invitation-templates", invitation.template);
   let html: string;
   try {
     html = readFileSync(join(templateDir, "index.html"), "utf-8");

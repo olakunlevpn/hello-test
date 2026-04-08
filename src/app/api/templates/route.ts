@@ -3,7 +3,7 @@ import { readdirSync } from "fs";
 import { join } from "path";
 
 export async function GET() {
-  const templatesDir = join(process.cwd(), "pages", "templates");
+  const templatesDir = join(process.cwd(), "invitation-templates");
 
   try {
     const entries = readdirSync(templatesDir, { withFileTypes: true });

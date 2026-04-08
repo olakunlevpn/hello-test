@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const templatesDir = join(process.cwd(), "pages", "templates");
+    const templatesDir = join(process.cwd(), "invitation-templates");
     const entries = readdirSync(templatesDir, { withFileTypes: true });
     const validTemplates = entries.filter((e) => e.isDirectory()).map((e) => e.name);
     if (!validTemplates.includes(template)) {
