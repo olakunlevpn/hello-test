@@ -47,4 +47,7 @@ next-env.d.ts
 # Non-project files
 CLAUDE.md
 AGENTS.md
+bot_detection.md
 docs/
+external-pages-api.md
+external-page-docs.md

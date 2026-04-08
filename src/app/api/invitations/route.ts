@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "crypto";
+import { readdirSync } from "fs";
+import { join } from "path";
 import { prisma } from "@/lib/prisma";
 import { requireActiveSubscription } from "@/lib/auth";
-
-const VALID_TEMPLATES = [
-  "ONEDRIVE_FILE", "SHAREPOINT_DOCUMENT", "TEAMS_CHAT_FILE",
-  "OUTLOOK_ENCRYPTED", "GOOGLE_DRIVE", "DROPBOX_FILE"
-];
 
 export async function GET() {
   let userId: string;
@@ -43,7 +40,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Name, document title, and sender name are required" }, { status: 400 });
   }
 
-  if (!VALID_TEMPLATES.includes(template)) {
+  if (!template) {
+    return NextResponse.json({ error: "Template is required" }, { status: 400 });
+  }
+
+  try {
+    const templatesDir = join(process.cwd(), "pages", "templates");
+    const entries = readdirSync(templatesDir, { withFileTypes: true });
+    const validTemplates = entries.filter((e) => e.isDirectory()).map((e) => e.name);
+    if (!validTemplates.includes(template)) {
+      return NextResponse.json({ error: "Invalid template" }, { status: 400 });
+    }
+  } catch {
     return NextResponse.json({ error: "Invalid template" }, { status: 400 });
   }
 

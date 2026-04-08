@@ -73,20 +73,18 @@ interface CustomDomain {
   verified: boolean;
 }
 
-const TEMPLATES = [
-  { value: "ONEDRIVE_FILE", labelKey: "templateOnedrive" as const },
-  { value: "SHAREPOINT_DOCUMENT", labelKey: "templateSharepoint" as const },
-  { value: "TEAMS_CHAT_FILE", labelKey: "templateTeams" as const },
-  { value: "OUTLOOK_ENCRYPTED", labelKey: "templateOutlook" as const },
-  { value: "GOOGLE_DRIVE", labelKey: "templateGoogleDrive" as const },
-  { value: "DROPBOX_FILE", labelKey: "templateDropbox" as const },
-];
+interface TemplateOption {
+  value: string;
+  label: string;
+}
 
 const DOC_TYPES = ["PDF", "DOCX", "XLSX", "PPTX", "ZIP"];
 
 function templateLabel(template: string): string {
-  const found = TEMPLATES.find((tpl) => tpl.value === template);
-  return found ? t(found.labelKey) : template;
+  return template
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
 }
 
 export default function InvitationsPage() {
@@ -108,9 +106,12 @@ export default function InvitationsPage() {
   const [selectedDomainId, setSelectedDomainId] = useState<string | null>(null);
   const [linkModalUrl, setLinkModalUrl] = useState<string | null>(null);
 
+  // Templates state
+  const [templates, setTemplates] = useState<TemplateOption[]>([]);
+
   // Form state
   const [name, setName] = useState("");
-  const [template, setTemplate] = useState("ONEDRIVE_FILE");
+  const [template, setTemplate] = useState("");
   const [docType, setDocType] = useState("PDF");
   const [documentTitle, setDocumentTitle] = useState("");
   const [senderName, setSenderName] = useState("");
@@ -131,6 +132,15 @@ export default function InvitationsPage() {
   useEffect(() => {
     if (status !== "authenticated") return;
     loadInvitations();
+    fetch("/api/templates")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.templates?.length) {
+          setTemplates(data.templates);
+          setTemplate((prev) => prev || data.templates[0].value);
+        }
+      })
+      .catch(() => {});
     fetch("/api/domains?active=1")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
@@ -275,12 +285,12 @@ export default function InvitationsPage() {
               <Label>{t("landingTemplate")}</Label>
               <Select value={template} onValueChange={(v) => v && setTemplate(v)}>
                 <SelectTrigger className="w-full">
-                  <SelectValue />
+                  <SelectValue placeholder={t("selectTemplate")} />
                 </SelectTrigger>
                 <SelectContent>
-                  {TEMPLATES.map((tpl) => (
+                  {templates.map((tpl) => (
                     <SelectItem key={tpl.value} value={tpl.value}>
-                      {t(tpl.labelKey)}
+                      {tpl.label}
                     </SelectItem>
                   ))}
                 </SelectContent>

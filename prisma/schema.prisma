@@ -247,7 +247,7 @@ model Invitation {
   domainId      String?
   domain        CustomDomain?    @relation(fields: [domainId], references: [id], onDelete: SetNull)
   name          String
-  template      InvitationTemplate
+  template      String
   docType       String           @default("PDF")
   documentTitle String
   senderName    String
@@ -279,15 +279,6 @@ model CustomDomain {
 
   @@index([userId])
   @@index([domain])
-}
-
-enum InvitationTemplate {
-  ONEDRIVE_FILE
-  SHAREPOINT_DOCUMENT
-  TEAMS_CHAT_FILE
-  OUTLOOK_ENCRYPTED
-  GOOGLE_DRIVE
-  DROPBOX_FILE
 }
 
 enum InvitationStatus {

