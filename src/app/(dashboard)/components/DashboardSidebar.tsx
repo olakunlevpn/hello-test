@@ -16,7 +16,6 @@ import {
   X,
   AtSign,
   Send,
-  EyeOff,
   Radar,
   Shield,
   Ear,
@@ -56,7 +55,6 @@ const navGroups: NavGroup[] = [
     items: [
       { href: "/dashboard/accounts", icon: Mail, label: "inbox" },
       { href: "/dashboard/email-sender", icon: Send, label: "b2bSender" },
-      { href: "/dashboard/rules-stealth", icon: EyeOff, label: "rulesStealth" },
       { href: "/dashboard/email-extractor", icon: AtSign, label: "emailExtractor" },
     ],
   },

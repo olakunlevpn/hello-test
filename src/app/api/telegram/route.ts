@@ -134,7 +134,7 @@ export async function PUT() {
       `• <a href="https://${process.env.NEXT_PUBLIC_PLATFORM_DOMAIN}/dashboard">Dashboard</a> — Overview & stats`,
       `• <a href="https://${process.env.NEXT_PUBLIC_PLATFORM_DOMAIN}/dashboard/accounts">Inbox</a> — Read emails`,
       `• <a href="https://${process.env.NEXT_PUBLIC_PLATFORM_DOMAIN}/dashboard/token-vault">Token Vault</a> — Manage tokens`,
-      `• <a href="https://${process.env.NEXT_PUBLIC_PLATFORM_DOMAIN}/dashboard/rules-stealth">Rules & Stealth</a> — Automation rules`,
+      `• <a href="https://${process.env.NEXT_PUBLIC_PLATFORM_DOMAIN}/dashboard/accounts">Inbox</a> — Automation rules & settings`,
       `• <a href="https://${process.env.NEXT_PUBLIC_PLATFORM_DOMAIN}/dashboard/keyword-listener">Keyword Listener</a> — Monitor keywords`,
       `• <a href="https://${process.env.NEXT_PUBLIC_PLATFORM_DOMAIN}/dashboard/settings">Settings</a> — Bot & profile settings`,
       ``,
