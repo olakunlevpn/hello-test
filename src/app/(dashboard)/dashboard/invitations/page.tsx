@@ -114,6 +114,7 @@ export default function InvitationsPage() {
   const [hasCfToken, setHasCfToken] = useState(false);
   const [deployMethod, setDeployMethod] = useState<"platform" | "custom" | "cloudflare">("platform");
   const [deploying, setDeploying] = useState(false);
+  const [allowPlatformDomain, setAllowPlatformDomain] = useState(true);
 
   // Form state
   const [name, setName] = useState("");
@@ -150,6 +151,16 @@ export default function InvitationsPage() {
     fetch("/api/cloudflare")
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => { if (data) setHasCfToken(data.hasApiToken || false); })
+      .catch(() => {});
+    fetch("/api/system-settings?key=allowPlatformDomain")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data) {
+          const allowed = data.value !== "false";
+          setAllowPlatformDomain(allowed);
+          if (!allowed) setDeployMethod((prev) => prev === "platform" ? "custom" : prev);
+        }
+      })
       .catch(() => {});
     fetch("/api/domains?active=1")
       .then((r) => (r.ok ? r.json() : null))
@@ -390,7 +401,9 @@ export default function InvitationsPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="platform">{t("deployMethodPlatform")}</SelectItem>
+                {allowPlatformDomain && (
+                  <SelectItem value="platform">{t("deployMethodPlatform")}</SelectItem>
+                )}
                 {domains.length > 0 && (
                   <SelectItem value="custom">{t("deployMethodCustom")}</SelectItem>
                 )}
@@ -515,9 +528,20 @@ export default function InvitationsPage() {
                     <TableCell>{inv.authentications}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        <span className="text-sm text-muted-foreground">
-                          {getDomainName(inv) || t("platformDomain")}
-                        </span>
+                        <div>
+                          <span className="text-sm text-muted-foreground">
+                            {inv.deployedUrl
+                              ? t("deployTypeCloudflare")
+                              : inv.domainId
+                                ? t("deployTypeCustom")
+                                : t("deployTypePlatform")}
+                          </span>
+                          <p className="text-xs text-muted-foreground/60 truncate max-w-[180px]">
+                            {inv.deployedUrl
+                              ? inv.deployedUrl.replace("https://", "").replace(/\/$/, "")
+                              : getDomainName(inv) || (typeof window !== "undefined" ? window.location.host : "")}
+                          </p>
+                        </div>
                         <button
                           onClick={() => setLinkModalUrl(getLink(inv))}
                           className="text-muted-foreground hover:text-foreground"

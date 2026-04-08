@@ -89,17 +89,39 @@ export default function AdminSettingsPage() {
   // System settings
   const [telegramChannelUrl, setTelegramChannelUrl] = useState("");
   const [savingTelegram, setSavingTelegram] = useState(false);
+  const [allowPlatformDomain, setAllowPlatformDomain] = useState(true);
+  const [savingPlatformDomain, setSavingPlatformDomain] = useState(false);
 
   useEffect(() => {
     fetch("/api/admin/system-settings")
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
-        if (data?.settings?.telegramChannelUrl) {
-          setTelegramChannelUrl(data.settings.telegramChannelUrl);
+        if (data?.settings) {
+          if (data.settings.telegramChannelUrl) setTelegramChannelUrl(data.settings.telegramChannelUrl);
+          if (data.settings.allowPlatformDomain !== undefined) setAllowPlatformDomain(data.settings.allowPlatformDomain !== "false");
         }
       })
       .catch(() => {});
   }, []);
+
+  const handleTogglePlatformDomain = async (checked: boolean) => {
+    setAllowPlatformDomain(checked);
+    setSavingPlatformDomain(true);
+    try {
+      const res = await fetch("/api/admin/system-settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "allowPlatformDomain", value: String(checked) }),
+      });
+      if (res.ok) toast.success(t("settingsSaved"));
+      else toast.error(t("error"));
+    } catch {
+      toast.error(t("error"));
+      setAllowPlatformDomain(!checked);
+    } finally {
+      setSavingPlatformDomain(false);
+    }
+  };
 
   const handleSaveTelegramUrl = async () => {
     setSavingTelegram(true);
@@ -292,7 +314,23 @@ export default function AdminSettingsPage() {
         <CardHeader>
           <CardTitle>{t("generalSettings")}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
+          {/* Platform Domain Toggle */}
+          <div className="flex items-center justify-between rounded-lg border border-border p-4">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">{t("allowPlatformDomain")}</label>
+              <p className="text-xs text-muted-foreground max-w-md">{t("allowPlatformDomainDescription")}</p>
+            </div>
+            <Switch
+              checked={allowPlatformDomain}
+              onCheckedChange={handleTogglePlatformDomain}
+              disabled={savingPlatformDomain}
+            />
+          </div>
+
+          <Separator />
+
+          {/* Telegram Channel URL */}
           <div className="flex items-end gap-3">
             <div className="flex-1 max-w-md">
               <label className="text-sm font-medium mb-1 block">{t("telegramChannelUrl")}</label>
